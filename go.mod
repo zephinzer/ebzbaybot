@@ -1,4 +1,4 @@
-module github.com/zephinzer/bot-ebzbay
+module github.com/zephinzer/ebzbaybot
 
 go 1.18
 
