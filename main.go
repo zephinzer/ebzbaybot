@@ -1,7 +1,7 @@
 package main
 
-import "github.com/zephinzer/ebzbaybot/cmd/ebzbot"
+import "github.com/zephinzer/ebzbaybot/cmd/ebzbaybot"
 
 func main() {
-	ebzbot.GetCommand().Execute()
+	ebzbaybot.GetCommand().Execute()
 }
