@@ -14,6 +14,8 @@ ifeq "${GOOS}" "windows"
 bin_ext := .exe
 endif
 
+env:
+	@docker-compose up -d
 deps:
 	@go mod vendor
 start:

@@ -1,0 +1,12 @@
+version: "3.7"
+services:
+  postgresql:
+    # image reference: https://hub.docker.com/_/postgres
+    image: library/postgres:13.3-alpine
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: user
+      POSTGRES_DB: database
+    ports: ["35432:5432"]
+    volumes: # [] # uncomment this and comment below to remove persistence
+      - ./.data/postgresql/var/lib/postgresql/data:/var/lib/postgresql/data
