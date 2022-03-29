@@ -2,15 +2,17 @@ package telegram
 
 import (
 	"fmt"
-	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/zephinzer/ebzbaybot/internal/lifecycle"
+	"github.com/zephinzer/ebzbaybot/internal/storage"
 	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 )
 
 type StartBotOpts struct {
 	ApiKey         string
 	IsDebugEnabled bool
+	Storage        storage.Storage
 }
 
 func StartBot(opts StartBotOpts) error {
@@ -19,23 +21,17 @@ func StartBot(opts StartBotOpts) error {
 		return fmt.Errorf("failed to instantiate a new bot: %s", err)
 	}
 	bot.Debug = opts.IsDebugEnabled
-
 	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
-
+	u.Timeout = 30
 	updates := bot.GetUpdatesChan(u)
-
 	log.Infof("starting bot at https://t.me/%s...", bot.Self.UserName)
-
-	lifecycleInterval := 10 * time.Second
-	go func(tick <-chan time.Time) {
-		for {
-			<-tick
-
-		}
-	}(time.NewTicker(lifecycleInterval).C)
-
+	go func() {
+		lifecycle.StartUpdatingWatchers(lifecycle.WatchingOpts{Bot: bot, Storage: opts.Storage})
+	}()
 	for update := range updates {
+		if update.CallbackQuery != nil {
+			handleCallback(update, bot, opts.Storage)
+		}
 		if update.Message == nil {
 			continue
 		}

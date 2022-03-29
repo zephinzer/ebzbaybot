@@ -5,13 +5,13 @@ func NewMemory() Storage {
 	return &memory
 }
 
-type Memory map[string]interface{}
+type Memory map[string][]byte
 
-func (m Memory) Get(key string) (interface{}, error) {
+func (m Memory) Get(key string) ([]byte, error) {
 	return m[key], nil
 }
 
-func (m Memory) Set(key string, value interface{}) error {
+func (m Memory) Set(key string, value []byte) error {
 	m[key] = value
 	return nil
 }

@@ -11,12 +11,7 @@ const (
 	SortByPrice         = "price"
 	SortByRank          = "rank"
 	SortByScore         = "score"
+	SortByVolume        = "totalVolume"
 	DirectionAscending  = "asc"
 	DirectionDescending = "desc"
 )
-
-type CollectionStats struct {
-	FloorPrice            float64
-	AverageLowestTenPrice float64
-	Listings              int64
-}

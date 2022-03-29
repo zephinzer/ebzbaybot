@@ -10,7 +10,13 @@ import (
 	"gitlab.com/zephinzer/go-devops"
 )
 
-func getDefaultParams(page, collection, sortBy, direction string) map[string]string {
+type CollectionStats struct {
+	FloorPrice            float64 `json:"floorPrice"`
+	AverageLowestTenPrice float64 `json:"averageLowestTenPrice"`
+	Listings              int64   `json:"listings"`
+}
+
+func getCollectionStatsParams(page, collection, sortBy, direction string) map[string]string {
 	return map[string]string{
 		"state":      "0",
 		"page":       page,
@@ -22,7 +28,7 @@ func getDefaultParams(page, collection, sortBy, direction string) map[string]str
 }
 
 func GetCollectionStats(collection string) CollectionStats {
-	params := getDefaultParams("1", collection, SortByPrice, DirectionAscending)
+	params := getCollectionStatsParams("1", collection, SortByPrice, DirectionAscending)
 	urlInstance, _ := url.Parse(API_BASE_URL)
 	urlInstance.Path = API_PATH_LISTINGS
 	query := urlInstance.Query()
