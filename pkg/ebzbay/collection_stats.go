@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/zephinzer/ebzbaybot/pkg/constants"
 	"gitlab.com/zephinzer/go-devops"
 )
 
@@ -27,7 +28,10 @@ func getCollectionStatsParams(page, collection, sortBy, direction string) map[st
 	}
 }
 
-func GetCollectionStats(collection string) CollectionStats {
+func GetCollectionStats(collection string) *CollectionStats {
+	if _, exists := constants.CollectionByAddress[collection]; !exists {
+		return nil
+	}
 	params := getCollectionStatsParams("1", collection, SortByPrice, DirectionAscending)
 	urlInstance, _ := url.Parse(API_BASE_URL)
 	urlInstance.Path = API_PATH_LISTINGS
@@ -61,5 +65,5 @@ func GetCollectionStats(collection string) CollectionStats {
 		FloorPrice:            floorPrice,
 		Listings:              listingResponse.TotalCount,
 	}
-	return collectionStats
+	return &collectionStats
 }

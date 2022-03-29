@@ -16,8 +16,6 @@ func GetCollectionByIdentifier(identifier string) (*Collection, error) {
 	collectionAddresses := constants.CollectionByName[identifier]
 	isCollectionNameValid := collectionNames != nil && len(collectionNames) > 0
 	isCollectionAddressValid := collectionAddresses != nil && len(collectionAddresses) > 0
-	fmt.Println(collectionNames)
-	fmt.Println(collectionAddresses)
 	if !isCollectionNameValid && !isCollectionAddressValid {
 		return nil, fmt.Errorf("failed to receive a known identifier")
 	} else if isCollectionNameValid { // address provided

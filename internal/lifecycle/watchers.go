@@ -52,7 +52,7 @@ func StartUpdatingWatchers(opts WatchingOpts) error {
 						directionText = "🔼"
 					}
 					msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(
-						"🚨%s Floor price of [%s collection](https://app.ebisusbay.com/collection/%s) has changed from %s CRO to %s CRO",
+						"🚨%s Floor price of [%s collection](https://app.ebisusbay.com/collection/%s) has changed from _%s_ CRO to *%s* CRO",
 						directionText,
 						collectionInstance.Name,
 						collectionInstance.Address,

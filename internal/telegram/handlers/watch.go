@@ -17,6 +17,7 @@ import (
 const (
 	CALLBACK_WATCH_CONFIRM = "watch/confirm"
 	CALLBACK_WATCH_CANCEL  = "watch/cancel"
+	CALLBACK_WATCH_SELECT  = "watch/select"
 )
 
 func getWatchKeyboard(collection string) tgbotapi.InlineKeyboardMarkup {
@@ -39,8 +40,22 @@ func handleWatchCallback(opts Opts) error {
 	callbackData := opts.Update.CallbackQuery.Data
 	callback := strings.Split(callbackData, "/")
 	callbackAction := callback[1]
-	fmt.Println(callbackAction)
 	switch callbackAction {
+	case "select":
+		chatID := opts.Update.FromChat().ID
+		if len(callback) < 3 {
+			msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(
+				"⚠️ Not sure why I did not find a collection address in my callback, probably ping the devs! Use /help to find out how.",
+			))
+			msg.ParseMode = "markdown"
+			msg.ReplyToMessageID = opts.Update.CallbackQuery.Message.MessageID
+			_, err := opts.Bot.Send(msg)
+			return err
+		}
+		callbackCollection := callback[2]
+		deleteMessageRequest := tgbotapi.NewDeleteMessage(chatID, opts.Update.CallbackQuery.Message.MessageID)
+		opts.Bot.Send(deleteMessageRequest)
+		return handleWatchConfirmation(opts, callbackCollection)
 	case "confirm":
 		chatID := opts.Update.FromChat().ID
 		deleteMessageRequest := tgbotapi.NewDeleteMessage(chatID, opts.Update.CallbackQuery.Message.MessageID)
@@ -84,9 +99,10 @@ func handleWatchCallback(opts Opts) error {
 
 		collectionName := constants.CollectionByAddress[callbackCollection][0]
 		msg := tgbotapi.NewMessage(opts.Update.FromChat().ID, fmt.Sprintf(
-			"👀 You are now watching the [%s collection](https://app.ebisusbay.com/collection/%s)!",
+			"😍 I will notify you on changes to the [%s collection](https://app.ebisusbay.com/collection/%s) from now on! You may use /unwatch to unregister this should your interest in *%s* wane",
 			collectionName,
 			callbackCollection,
+			collectionName,
 		))
 		msg.ParseMode = "markdown"
 		_, err := opts.Bot.Send(msg)
@@ -102,17 +118,23 @@ func handleWatchCallback(opts Opts) error {
 func handleWatchCommand(opts Opts) error {
 	collectionIdentifier := opts.Update.Message.CommandArguments()
 	if collectionIdentifier == "" {
-		msg := tgbotapi.NewMessage(opts.Update.Message.Chat.ID, fmt.Sprintf(
-			"⚠️ Use this command with a collection identifier",
+		collectionsInlineKeyboard := getCollectionsAsKeyboard(CALLBACK_WATCH_SELECT)
+		msg := tgbotapi.NewMessage(opts.Update.FromChat().ID, fmt.Sprintf(
+			"👋🏼 I sense interest in you, young one. Which collection shall I update you about?",
 		))
 		msg.ParseMode = "markdown"
 		msg.ReplyToMessageID = opts.Update.Message.MessageID
+		msg.ReplyMarkup = collectionsInlineKeyboard
 		_, err := opts.Bot.Send(msg)
 		return err
 	}
+	return handleWatchConfirmation(opts, collectionIdentifier)
+}
+
+func handleWatchConfirmation(opts Opts, collectionIdentifier string) error {
 	collectionDetails, err := collection.GetCollectionByIdentifier(collectionIdentifier)
 	if err != nil {
-		msg := tgbotapi.NewMessage(opts.Update.Message.Chat.ID, fmt.Sprintf(
+		msg := tgbotapi.NewMessage(opts.Update.FromChat().ID, fmt.Sprintf(
 			"⚠️ Apologies, no collection could be found with the provided identifier `%s`",
 			collectionIdentifier,
 		))
@@ -122,14 +144,18 @@ func handleWatchCommand(opts Opts) error {
 		return err
 	}
 
-	msg := tgbotapi.NewMessage(opts.Update.Message.Chat.ID, fmt.Sprintf(
-		"ℹ️ Would you like to watch the *%s* collection with token address [%s](https://cronoscan.com/address/%s) (click to verify on CronosScan)?",
+	msg := tgbotapi.NewMessage(opts.Update.FromChat().ID, fmt.Sprintf(
+		"👀 Interesting choice you have made. Shall I confirm *%s* collection with the token address `%s` as your destiny for today?\n\n"+
+			"👉🏼 Review on [Cronoscan](https://cronoscan.com/address/%s) | [Ebisus Bay](https://app.ebisusbay.com/collection/%s)",
 		collectionDetails.Name,
+		collectionDetails.Address,
 		collectionDetails.Address,
 		collectionDetails.Address,
 	))
 	msg.ParseMode = "markdown"
-	msg.ReplyToMessageID = opts.Update.Message.MessageID
+	if opts.Update.Message != nil {
+		msg.ReplyToMessageID = opts.Update.Message.MessageID
+	}
 	msg.ReplyMarkup = getWatchKeyboard(collectionDetails.Address)
 	_, err = opts.Bot.Send(msg)
 	return err

@@ -51,7 +51,6 @@ func GetCollections() (Collections, error) {
 	body, _ := ioutil.ReadAll(response.Body)
 	var collectionsResponse CollectionsResponse
 	if err := json.Unmarshal(body, &collectionsResponse); err != nil {
-		fmt.Println(string(body))
 		return nil, fmt.Errorf("failed to understand response for /collections: %s", err)
 	}
 	if collectionsResponse.Status != http.StatusOK {

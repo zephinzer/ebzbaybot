@@ -18,6 +18,8 @@ func handleCallback(update tgbotapi.Update, bot *tgbotapi.BotAPI, storageInstanc
 	}
 	handler := callbackData[0]
 	switch handler {
+	case "list":
+		return handlers.HandleList(opts)
 	case "watch":
 		return handlers.HandleWatch(opts)
 	}
