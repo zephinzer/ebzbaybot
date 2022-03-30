@@ -11,14 +11,19 @@ import (
 )
 
 const (
-	CALLBACK_LIST_GET = "list/get"
+	CALLBACK_LIST_GET           = "list/get"
+	CALLBACK_LIST_GET_NO_DELETE = "list/get-retain"
 )
 
 func handleListCallback(opts Opts) error {
+	removeOriginalMessage := true
 	callbackData := opts.Update.CallbackQuery.Data
 	callback := strings.Split(callbackData, "/")
 	callbackAction := callback[1]
 	switch callbackAction {
+	case "get-retain":
+		removeOriginalMessage = false
+		fallthrough
 	case "get":
 		chatID := opts.Update.FromChat().ID
 		if len(callback) < 3 {
@@ -36,8 +41,10 @@ func handleListCallback(opts Opts) error {
 		collectionStats := ebzbay.GetCollectionStats(callbackCollection)
 
 		// remove the old message
-		deleteMessageRequest := tgbotapi.NewDeleteMessage(chatID, opts.Update.CallbackQuery.Message.MessageID)
-		opts.Bot.Send(deleteMessageRequest)
+		if removeOriginalMessage {
+			deleteMessageRequest := tgbotapi.NewDeleteMessage(chatID, opts.Update.CallbackQuery.Message.MessageID)
+			opts.Bot.Send(deleteMessageRequest)
+		}
 
 		return sendCollectionDetails(opts, collectionStats, collectionDetails)
 	}

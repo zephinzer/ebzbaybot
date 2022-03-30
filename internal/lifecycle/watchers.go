@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"database/sql"
 	"fmt"
+	"path"
 	"strconv"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/zephinzer/ebzbaybot/internal/constants"
 	"github.com/zephinzer/ebzbaybot/internal/floorpricediff"
 	"github.com/zephinzer/ebzbaybot/internal/storage"
+	"github.com/zephinzer/ebzbaybot/internal/telegram/handlers"
 	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 	"github.com/zephinzer/ebzbaybot/internal/watch"
 )
@@ -78,6 +80,17 @@ func StartUpdatingWatchers(opts WatchingOpts) error {
 					previousFloorPrice,
 				))
 				msg.ParseMode = "markdown"
+				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonData(
+							"SHOW COLLECTION INFO",
+							path.Join(
+								handlers.CALLBACK_LIST_GET_NO_DELETE,
+								collectionInstance.ID,
+							),
+						),
+					),
+				)
 				opts.Bot.Send(msg)
 
 				databaseWatch.LastUpdated = time.Now()

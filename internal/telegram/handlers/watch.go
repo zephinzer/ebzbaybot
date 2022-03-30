@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	CALLBACK_WATCH_CONFIRM = "watch/confirm"
-	CALLBACK_WATCH_CANCEL  = "watch/cancel"
-	CALLBACK_WATCH_SELECT  = "watch/select"
+	CALLBACK_WATCH_CONFIRM           = "watch/confirm"
+	CALLBACK_WATCH_CONFIRM_NO_DELETE = "watch/confirm-retain"
+	CALLBACK_WATCH_CANCEL            = "watch/cancel"
+	CALLBACK_WATCH_SELECT            = "watch/select"
 )
 
 func getWatchKeyboard(collection string) tgbotapi.InlineKeyboardMarkup {
@@ -36,6 +37,7 @@ func HandleWatch(opts Opts) error {
 }
 
 func handleWatchCallback(opts Opts) error {
+	removeOriginalMessage := true
 	callbackData := opts.Update.CallbackQuery.Data
 	callback := strings.Split(callbackData, "/")
 	callbackAction := callback[1]
@@ -52,13 +54,20 @@ func handleWatchCallback(opts Opts) error {
 			return err
 		}
 		callbackCollection := callback[2]
-		deleteMessageRequest := tgbotapi.NewDeleteMessage(chatID, opts.Update.CallbackQuery.Message.MessageID)
-		opts.Bot.Send(deleteMessageRequest)
+		if removeOriginalMessage {
+			deleteMessageRequest := tgbotapi.NewDeleteMessage(chatID, opts.Update.CallbackQuery.Message.MessageID)
+			opts.Bot.Send(deleteMessageRequest)
+		}
 		return handleWatchConfirmation(opts, callbackCollection)
+	case "confirm-retain":
+		removeOriginalMessage = false
+		fallthrough
 	case "confirm":
 		chatID := opts.Update.FromChat().ID
-		deleteMessageRequest := tgbotapi.NewDeleteMessage(chatID, opts.Update.CallbackQuery.Message.MessageID)
-		opts.Bot.Send(deleteMessageRequest)
+		if removeOriginalMessage {
+			deleteMessageRequest := tgbotapi.NewDeleteMessage(chatID, opts.Update.CallbackQuery.Message.MessageID)
+			opts.Bot.Send(deleteMessageRequest)
+		}
 		if opts.Storage == nil {
 			msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(
 				"⚠️ I couldn't store this information because the dev forgot to add a storage component to me",

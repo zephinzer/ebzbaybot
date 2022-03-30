@@ -9,6 +9,7 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/zephinzer/ebzbaybot/internal/collection"
+	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 	"github.com/zephinzer/ebzbaybot/internal/watch"
 	"github.com/zephinzer/ebzbaybot/pkg/constants"
 	"github.com/zephinzer/ebzbaybot/pkg/ebzbay"
@@ -125,6 +126,27 @@ func sendCollectionDetails(opts Opts, stats *ebzbay.CollectionStats, details *co
 		details.ID,
 	))
 	responseMessage.ParseMode = "markdown"
-	_, err := opts.Bot.Send(responseMessage)
+	watchExists, err := watch.Exists(watch.ExistsOpts{
+		Connection:   opts.Connection,
+		ChatID:       chatID,
+		CollectionID: details.ID,
+	})
+	if err != nil {
+		log.Warnf("failed to check whether watch exists for chat[%s] and collection[%s]: %s", chatID, details.ID, err)
+	}
+	if !watchExists {
+		responseMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(
+					"WATCH THIS COLLECTION",
+					path.Join(
+						CALLBACK_WATCH_CONFIRM_NO_DELETE,
+						details.ID,
+					),
+				),
+			),
+		)
+	}
+	_, err = opts.Bot.Send(responseMessage)
 	return err
 }
