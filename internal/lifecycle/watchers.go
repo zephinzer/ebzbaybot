@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -8,24 +9,49 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/zephinzer/ebzbaybot/internal/collection"
+	"github.com/zephinzer/ebzbaybot/internal/floorpricediff"
+	"github.com/zephinzer/ebzbaybot/internal/storage"
 	"github.com/zephinzer/ebzbaybot/internal/types"
 	"github.com/zephinzer/ebzbaybot/internal/utils/log"
+	"github.com/zephinzer/ebzbaybot/internal/watch"
 )
 
-type Watcher struct {
-	LastUpdated string `json:"lastUpdated"`
+type WatchingOpts struct {
+	Bot        *tgbotapi.BotAPI
+	Connection *sql.DB
+	Storage    storage.Storage
 }
 
 func StartUpdatingWatchers(opts WatchingOpts) error {
 	everyInterval := time.NewTicker(5 * time.Second).C
 	for {
 		<-everyInterval
+		log.Infof("loading watches from mem...")
 		watchesJSON, _ := opts.Storage.Get("watches")
 
+		log.Infof("loading watches from db...")
+		databaseWatches, err := watch.Load(watch.LoadOpts{
+			Connection: opts.Connection,
+		})
+		if err != nil {
+			log.Warnf("failed to load watches from db: %s", err)
+		}
+		log.Infof("%v watches loaded from db", len(databaseWatches))
+
 		// get floor price changes
+		log.Infof("loading floor price diffs from mem...")
 		floorPriceChanges, _ := opts.Storage.Get(StorageKeyFloorPriceChanges)
 		floorPriceChangesMap := types.CollectionDiffStorage{}
 		json.Unmarshal(floorPriceChanges, &floorPriceChangesMap)
+
+		log.Infof("loading floor price diffs from db...")
+		databaseFloorPriceDiffs, err := floorpricediff.Load(floorpricediff.LoadOpts{
+			Connection: opts.Connection,
+		})
+		if err != nil {
+			log.Warnf("failed to load watches from db: %s", err)
+		}
+		log.Infof("%v floor price differences loaded from db", len(databaseFloorPriceDiffs))
 
 		watchesMap := types.WatchStorage{}
 		json.Unmarshal(watchesJSON, &watchesMap)
@@ -54,8 +80,8 @@ func StartUpdatingWatchers(opts WatchingOpts) error {
 					msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(
 						"🚨%s Floor price of [%s collection](https://app.ebisusbay.com/collection/%s) has changed from _%s_ CRO to *%s* CRO",
 						directionText,
-						collectionInstance.Name,
-						collectionInstance.Address,
+						collectionInstance.Label,
+						collectionInstance.ID,
 						previousFloorPrice,
 						currentFloorPrice,
 					))

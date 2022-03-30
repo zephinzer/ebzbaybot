@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -22,6 +23,9 @@ func Migrate(opts MigrateOpts) error {
 		return fmt.Errorf("failed to init migrations: %s", err)
 	}
 	if err := migrations.Up(); err != nil {
+		if errors.Is(err, migrate.ErrNoChange) {
+			return nil
+		}
 		return fmt.Errorf("failed to run migrations: %s", err)
 	}
 	return nil

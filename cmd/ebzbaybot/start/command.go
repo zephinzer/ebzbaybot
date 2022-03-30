@@ -1,6 +1,7 @@
 package start
 
 import (
+	"database/sql"
 	"fmt"
 	"sync"
 	"time"
@@ -53,17 +54,26 @@ func GetCommand() *cobra.Command {
 }
 
 func runE(cmd *cobra.Command, args []string) error {
+	// create & check database connection
 	databaseUrl := conf.GetString(ConfigKeyPostgresURL)
+	connection, err := sql.Open("postgres", databaseUrl)
+	if err != nil {
+		return fmt.Errorf("failed to connect to the db: %s", err)
+	}
+	if err := connection.Ping(); err != nil {
+		return fmt.Errorf("failed to ping the db: %s", err)
+	}
+
+	// migrate stuff
 	migrationsPath := conf.GetString(ConfigKeyMigrationsPath)
 	if err := database.Migrate(database.MigrateOpts{
 		DatabaseURL:    databaseUrl,
 		MigrationsPath: migrationsPath,
 	}); err != nil {
-		return fmt.Errorf("failed to migrate database: %s", err)
+		return fmt.Errorf("failed to migrate db: %s", err)
 	}
 
-	return nil
-
+	// start the bot
 	botToken := conf.GetString(ConfigKeyTelegramBotApiKey)
 	if botToken == "" {
 		return fmt.Errorf("failed to receive a telegram bot token, pass it in with --%s", ConfigKeyTelegramBotApiKey)
@@ -83,6 +93,7 @@ func runE(cmd *cobra.Command, args []string) error {
 	go func() {
 		lifecycleInterval := 10 * time.Second
 		lifecycle.StartCollectionsScraping(lifecycle.ScrapingOpts{
+			Connection:     connection,
 			ScrapeInterval: lifecycleInterval,
 			Storage:        storageInstance,
 		})
@@ -92,6 +103,7 @@ func runE(cmd *cobra.Command, args []string) error {
 	go func() {
 		if err := telegram.StartBot(telegram.StartBotOpts{
 			ApiKey:         botToken,
+			Connection:     connection,
 			IsDebugEnabled: false,
 			Storage:        storageInstance,
 		}); err != nil {

@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS collections(
-   id VARCHAR(42) PRIMARY KEY,
+   id VARCHAR(64) PRIMARY KEY,
    label VARCHAR(128) NOT NULL,
    aliases TEXT,
    average_sale_price TEXT NOT NULL,

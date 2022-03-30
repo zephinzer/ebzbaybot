@@ -1,10 +1,14 @@
 package lifecycle
 
 import (
+	"database/sql"
 	"encoding/json"
 	"strconv"
 	"time"
 
+	"github.com/zephinzer/ebzbaybot/internal/collection"
+	"github.com/zephinzer/ebzbaybot/internal/floorpricediff"
+	"github.com/zephinzer/ebzbaybot/internal/storage"
 	"github.com/zephinzer/ebzbaybot/internal/types"
 	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 	"github.com/zephinzer/ebzbaybot/pkg/ebzbay"
@@ -18,12 +22,19 @@ const (
 	StorageKeyCollections                = "collections"
 )
 
+type ScrapingOpts struct {
+	Connection     *sql.DB
+	ScrapeInterval time.Duration
+	Storage        storage.Storage
+}
+
 func StartCollectionsScraping(opts ScrapingOpts) {
 	everyInterval := time.NewTicker(opts.ScrapeInterval).C
 	dataStorage := opts.Storage
 	for {
 		<-everyInterval
-		currentTimestamp := strconv.FormatInt(time.Now().Unix(), 10)
+		currentTimestamp := time.Now().Unix()
+		currentTimestampString := strconv.FormatInt(currentTimestamp, 10)
 
 		log.Infof("retrieving stored collections...")
 		previousCollectionsMapJSON, _ := dataStorage.Get(StorageKeyCollections)
@@ -36,12 +47,32 @@ func StartCollectionsScraping(opts ScrapingOpts) {
 			log.Warnf("failed to get collections data: %s", err)
 			continue
 		}
+		databaseCollections := collection.Collections{}
 		currentCollectionsMap := types.CollectionStorage{}
 		for _, currentCollection := range currentCollections {
-			currentCollectionsMap[currentCollection.Collection] = types.Collection{
+			collectionID := currentCollection.Collection
+			currentCollectionsMap[collectionID] = types.Collection{
 				Data:        currentCollection,
-				LastUpdated: currentTimestamp,
+				LastUpdated: currentTimestampString,
 			}
+			localWhitelistCollection, err := collection.GetCollectionByIdentifier(collectionID)
+			if err == nil { // only add to the database if the collection is whitelisted
+				databaseCollections = append(
+					databaseCollections,
+					collection.New(currentCollection, collection.NewOpts{
+						Aliases: localWhitelistCollection.Aliases,
+						Label:   localWhitelistCollection.Label,
+					}),
+				)
+			}
+		}
+
+		log.Infof("storing in databse...")
+		if err := collection.Save(collection.SaveOpts{
+			Collections: databaseCollections,
+			Connection:  opts.Connection,
+		}); err != nil {
+			log.Warnf("failed to save collections to db: %s", err)
 		}
 
 		log.Infof("processing diffs...")
@@ -49,6 +80,7 @@ func StartCollectionsScraping(opts ScrapingOpts) {
 		newCollectionsCount := 0
 		floorPriceChangesMap := types.CollectionDiffStorage{}
 		floorPriceChangesCount := 0
+		databaseFloorPriceDiffs := floorpricediff.FloorPriceDiffs{}
 		for currentCollectionKey, currentCollection := range currentCollectionsMap {
 			_, exists := previousCollectionsMap[currentCollectionKey]
 			if !exists {
@@ -56,13 +88,24 @@ func StartCollectionsScraping(opts ScrapingOpts) {
 				newCollectionsMap[currentCollectionKey] = currentCollection
 				continue
 			}
-			if previousCollectionsMap[currentCollectionKey].Data.FloorPrice != currentCollection.Data.FloorPrice {
+			previousPrice := previousCollectionsMap[currentCollectionKey].Data.FloorPrice
+			currentPrice := currentCollection.Data.FloorPrice
+			if previousPrice != currentPrice {
 				floorPriceChangesCount += 1
 				floorPriceChangesMap[currentCollectionKey] = types.CollectionDiff{
 					Current:     currentCollection,
 					Previous:    previousCollectionsMap[currentCollectionKey],
-					LastUpdated: currentTimestamp,
+					LastUpdated: currentTimestampString,
 				}
+				databaseFloorPriceDiffs = append(
+					databaseFloorPriceDiffs,
+					floorpricediff.FloorPriceDiff{
+						CollectionID:  currentCollectionKey,
+						PreviousPrice: previousPrice,
+						CurrentPrice:  currentPrice,
+						LastUpdated:   time.Unix(currentTimestamp, 0),
+					},
+				)
 			}
 		}
 
@@ -73,7 +116,7 @@ func StartCollectionsScraping(opts ScrapingOpts) {
 			continue
 		}
 		dataStorage.Set(StorageKeyNewCollections, newCollectionsJSON)
-		dataStorage.Set(StorageKeyNewCollections+"_last_updated", []byte(currentTimestamp))
+		dataStorage.Set(StorageKeyNewCollections+"_last_updated", []byte(currentTimestampString))
 
 		log.Infof("storing %v floor price changes...", floorPriceChangesCount)
 		floorPriceChangesJSON, err := json.Marshal(floorPriceChangesMap)
@@ -82,7 +125,14 @@ func StartCollectionsScraping(opts ScrapingOpts) {
 			continue
 		}
 		dataStorage.Set(StorageKeyFloorPriceChanges, floorPriceChangesJSON)
-		dataStorage.Set(StorageKeyFloorPriceChanges+"_last_updated", []byte(currentTimestamp))
+		dataStorage.Set(StorageKeyFloorPriceChanges+"_last_updated", []byte(currentTimestampString))
+		log.Infof("storing floor price diffs into db...")
+		if err := floorpricediff.Save(floorpricediff.SaveOpts{
+			Connection:      opts.Connection,
+			FloorPriceDiffs: databaseFloorPriceDiffs,
+		}); err != nil {
+			log.Warnf("failed to save floor price diffs to db: %s", err)
+		}
 
 		log.Infof("storing current collection...")
 		currentCollectionsMapJSON, err := json.Marshal(currentCollectionsMap)
@@ -91,6 +141,6 @@ func StartCollectionsScraping(opts ScrapingOpts) {
 			continue
 		}
 		dataStorage.Set(StorageKeyCollections, currentCollectionsMapJSON)
-		dataStorage.Set(StorageKeyCollections+"_last_updated", []byte(currentTimestamp))
+		dataStorage.Set(StorageKeyCollections+"_last_updated", []byte(currentTimestampString))
 	}
 }

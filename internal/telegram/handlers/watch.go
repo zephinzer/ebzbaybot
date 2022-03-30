@@ -11,6 +11,8 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/zephinzer/ebzbaybot/internal/collection"
 	"github.com/zephinzer/ebzbaybot/internal/types"
+	"github.com/zephinzer/ebzbaybot/internal/utils/log"
+	"github.com/zephinzer/ebzbaybot/internal/watch"
 	"github.com/zephinzer/ebzbaybot/pkg/constants"
 )
 
@@ -96,6 +98,17 @@ func handleWatchCallback(opts Opts) error {
 		watches[userID].CollectionMap[callbackCollection] = currentTimestamp
 		watchesJSON, _ = json.Marshal(watches)
 		opts.Storage.Set("watches", watchesJSON)
+		log.Infof("saving watch to db...")
+		databaseWatchInstances := watch.Watches{
+			watch.Watch{
+				ChatID:       userID,
+				CollectionID: callbackCollection,
+			},
+		}
+		watch.Save(watch.SaveOpts{
+			Connection: opts.Connection,
+			Watches:    databaseWatchInstances,
+		})
 
 		collectionName := constants.CollectionByAddress[callbackCollection][0]
 		msg := tgbotapi.NewMessage(opts.Update.FromChat().ID, fmt.Sprintf(
@@ -147,16 +160,16 @@ func handleWatchConfirmation(opts Opts, collectionIdentifier string) error {
 	msg := tgbotapi.NewMessage(opts.Update.FromChat().ID, fmt.Sprintf(
 		"👀 Interesting choice you have made. Shall I confirm *%s* collection with the token address `%s` as your destiny for today?\n\n"+
 			"👉🏼 Review on [Cronoscan](https://cronoscan.com/address/%s) | [Ebisus Bay](https://app.ebisusbay.com/collection/%s)",
-		collectionDetails.Name,
-		collectionDetails.Address,
-		collectionDetails.Address,
-		collectionDetails.Address,
+		collectionDetails.Label,
+		collectionDetails.ID,
+		collectionDetails.ID,
+		collectionDetails.ID,
 	))
 	msg.ParseMode = "markdown"
 	if opts.Update.Message != nil {
 		msg.ReplyToMessageID = opts.Update.Message.MessageID
 	}
-	msg.ReplyMarkup = getWatchKeyboard(collectionDetails.Address)
+	msg.ReplyMarkup = getWatchKeyboard(collectionDetails.ID)
 	_, err = opts.Bot.Send(msg)
 	return err
 }

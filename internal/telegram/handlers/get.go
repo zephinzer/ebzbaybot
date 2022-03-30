@@ -36,6 +36,6 @@ func HandleGet(opts Opts) error {
 		log.Warnf("failed to send in-progress action: %s", err)
 	}
 
-	collectionStats := ebzbay.GetCollectionStats(collectionDetails.Address)
+	collectionStats := ebzbay.GetCollectionStats(collectionDetails.ID)
 	return sendCollectionDetails(opts, collectionStats, collectionDetails)
 }

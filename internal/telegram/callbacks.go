@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"database/sql"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -9,9 +10,19 @@ import (
 	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 )
 
-func handleCallback(update tgbotapi.Update, bot *tgbotapi.BotAPI, storageInstance storage.Storage) error {
+func handleCallback(
+	update tgbotapi.Update,
+	bot *tgbotapi.BotAPI,
+	storageInstance storage.Storage,
+	connection *sql.DB,
+) error {
 	log.Infof("callback[%s] %s", update.CallbackQuery.ID, update.CallbackQuery.Data)
-	opts := handlers.Opts{Update: update, Bot: bot, Storage: storageInstance}
+	opts := handlers.Opts{
+		Bot:        bot,
+		Connection: connection,
+		Storage:    storageInstance,
+		Update:     update,
+	}
 	callbackData := strings.Split(update.CallbackQuery.Data, "/")
 	if len(callbackData) == 0 {
 		return handlers.HandleIDK(opts)

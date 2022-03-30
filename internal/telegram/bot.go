@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"database/sql"
 	"fmt"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -11,6 +12,7 @@ import (
 
 type StartBotOpts struct {
 	ApiKey         string
+	Connection     *sql.DB
 	IsDebugEnabled bool
 	Storage        storage.Storage
 }
@@ -26,11 +28,20 @@ func StartBot(opts StartBotOpts) error {
 	updates := bot.GetUpdatesChan(u)
 	log.Infof("starting bot at https://t.me/%s...", bot.Self.UserName)
 	go func() {
-		lifecycle.StartUpdatingWatchers(lifecycle.WatchingOpts{Bot: bot, Storage: opts.Storage})
+		lifecycle.StartUpdatingWatchers(lifecycle.WatchingOpts{
+			Bot:        bot,
+			Connection: opts.Connection,
+			Storage:    opts.Storage,
+		})
 	}()
 	for update := range updates {
 		if update.CallbackQuery != nil {
-			handleCallback(update, bot, opts.Storage)
+			handleCallback(
+				update,
+				bot,
+				opts.Storage,
+				opts.Connection,
+			)
 		}
 		if update.Message == nil {
 			continue

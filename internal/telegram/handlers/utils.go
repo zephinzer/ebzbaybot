@@ -24,7 +24,7 @@ func getCollectionsAsKeyboard(callbackActionPrefix string) tgbotapi.InlineKeyboa
 		inlineKeyboardButtons = append(
 			inlineKeyboardButtons,
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData(collectionName, path.Join(callbackActionPrefix, collectionInstance.Address)),
+				tgbotapi.NewInlineKeyboardButtonData(collectionName, path.Join(callbackActionPrefix, collectionInstance.ID)),
 			),
 		)
 	}
@@ -35,7 +35,7 @@ func sendCollectionDetails(opts Opts, stats *ebzbay.CollectionStats, details *co
 	chatID := opts.Update.FromChat().ID
 
 	aliasText := ""
-	aliases := constants.CollectionByAddress[details.Address]
+	aliases := constants.CollectionByAddress[details.ID]
 	if len(aliases) > 1 {
 		aliasText = fmt.Sprintf("👤 Aliases: `%s`\n", strings.Join(aliases[1:], "`, `"))
 	}
@@ -47,14 +47,14 @@ func sendCollectionDetails(opts Opts, stats *ebzbay.CollectionStats, details *co
 			"💰 Floor price: *%v* $CRO\n"+
 			"⚓️ Average 10 lowest prices: _%v $CRO_\n\n"+
 			"👉🏼 View on [Cronoscan](https://cronoscan.com/address/%s) | [Ebisus Bay](https://app.ebisusbay.com/collection/%s)",
-		details.Name,
-		details.Address,
+		details.Label,
+		details.ID,
 		aliasText,
 		stats.Listings,
 		stats.FloorPrice,
 		stats.AverageLowestTenPrice,
-		details.Address,
-		details.Address,
+		details.ID,
+		details.ID,
 	))
 	responseMessage.ParseMode = "markdown"
 	_, err := opts.Bot.Send(responseMessage)

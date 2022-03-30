@@ -15,11 +15,13 @@ ENV RELEASE_TAG=${RELEASE_TAG}
 RUN make release_tag=${RELEASE_TAG} build
 RUN mv ./bin/ebzbaybot_$(go env GOOS)_$(go env GOARCH) ./bin/ebzbaybot
 RUN mv ./bin/ebzbaybot_$(go env GOOS)_$(go env GOARCH).sha256 ./bin/ebzbaybot.sha256
+COPY ./data/migrations ./data/migrations
 
 FROM scratch AS final
 COPY --from=build /go/src/app/bin/ebzbaybot /ebzbaybot
 COPY --from=build /go/src/app/bin/ebzbaybot.sha256 /ebzbaybot.sha256
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=build /go/src/app/data/migrations /data/migrations
 ENTRYPOINT ["/ebzbaybot"]
 LABEL repo_url https://github.com/zephinzer/ebzbaybot
 LABEL maintainer ebzbaybot
