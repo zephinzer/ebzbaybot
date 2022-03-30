@@ -45,13 +45,16 @@ func handleListCallback(opts Opts) error {
 }
 
 func handleListCommand(opts Opts) error {
-	collectionsInlineKeyboard := getCollectionsAsKeyboard(CALLBACK_LIST_GET)
+	collectionsInlineKeyboard, err := getCollectionsAsKeyboard(CALLBACK_LIST_GET)
+	if err != nil {
+		return fmt.Errorf("failed to get collections as a keyboard: %s", err)
+	}
 	msg := tgbotapi.NewMessage(opts.Update.Message.Chat.ID,
 		"👋🏼 Here are collections I know about. If you don't see a collection you're after, it's probably not whitelisted. Use /help to find out how you can let me know about them.",
 	)
 	msg.ReplyMarkup = collectionsInlineKeyboard
 	msg.ParseMode = "markdown"
-	_, err := opts.Bot.Send(msg)
+	_, err = opts.Bot.Send(msg)
 	if err != nil {
 		log.Warnf("failed to send response: %s", err)
 	}

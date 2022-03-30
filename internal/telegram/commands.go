@@ -1,25 +1,39 @@
 package telegram
 
 import (
+	"database/sql"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/zephinzer/ebzbaybot/internal/telegram/handlers"
 	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 )
 
-func handleCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI) error {
+func handleCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI, connection *sql.DB) error {
 	log.Infof("chat[%v]: command[%s] %s", update.Message.Chat.ID, update.Message.Command(), update.Message.CommandArguments())
-	opts := handlers.Opts{Update: update, Bot: bot}
+	opts := handlers.Opts{
+		Bot:        bot,
+		Connection: connection,
+		Update:     update,
+	}
+	var err error
 	switch update.Message.Command() {
 	case "start":
-		return handlers.HandleStart(opts)
+		err = handlers.HandleStart(opts)
 	case "list":
-		return handlers.HandleList(opts)
+		err = handlers.HandleList(opts)
 	case "get":
-		return handlers.HandleGet(opts)
+		err = handlers.HandleGet(opts)
 	case "watch":
-		return handlers.HandleWatch(opts)
+		err = handlers.HandleWatch(opts)
+	case "unwatch":
+		err = handlers.HandleUnwatch(opts)
 	case "help":
-		return handlers.HandleHelp(opts)
+		err = handlers.HandleHelp(opts)
+	default:
+		err = handlers.HandleIDK(opts)
 	}
-	return handlers.HandleIDK(opts)
+	if err != nil {
+		log.Warnf("a handler failed: %s", err)
+	}
+	return err
 }

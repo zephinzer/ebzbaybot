@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 )
 
 type SaveOpts struct {
@@ -69,7 +71,7 @@ func Save(opts SaveOpts) error {
 	)
 	combinedTransactions.WriteString(";\n")
 
-	fmt.Println(combinedTransactions.String())
+	log.Debug(combinedTransactions.String())
 	_, err := connection.Exec(
 		combinedTransactions.String(),
 		parameterValues...,

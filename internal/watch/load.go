@@ -4,10 +4,16 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 )
 
 type LoadOpts struct {
 	Connection *sql.DB
+	// Only defines a chat ID, when this is
+	// defined, the returned Watches only
+	// contains Watches by the chat owner
+	OnlyFor int64
 }
 
 func Load(opts LoadOpts) (Watches, error) {
@@ -17,12 +23,17 @@ func Load(opts LoadOpts) (Watches, error) {
 		"collection_id",
 		"last_updated",
 	}
-	rows, err := connection.Query(
-		fmt.Sprintf(
-			"SELECT %s FROM watches",
-			strings.Join(selectedColumns, ", "),
-		),
+	query := fmt.Sprintf(
+		"SELECT %s FROM watches",
+		strings.Join(selectedColumns, ", "),
 	)
+	log.Debug(query)
+	queryParams := []interface{}{}
+	if opts.OnlyFor != 0 {
+		query += " WHERE chat_id = $1;"
+		queryParams = append(queryParams, opts.OnlyFor)
+	}
+	rows, err := connection.Query(query, queryParams...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get collections: %s", err)
 	}

@@ -2,16 +2,15 @@ package lifecycle
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/zephinzer/ebzbaybot/internal/collection"
+	"github.com/zephinzer/ebzbaybot/internal/constants"
 	"github.com/zephinzer/ebzbaybot/internal/floorpricediff"
 	"github.com/zephinzer/ebzbaybot/internal/storage"
-	"github.com/zephinzer/ebzbaybot/internal/types"
 	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 	"github.com/zephinzer/ebzbaybot/internal/watch"
 )
@@ -26,76 +25,72 @@ func StartUpdatingWatchers(opts WatchingOpts) error {
 	everyInterval := time.NewTicker(5 * time.Second).C
 	for {
 		<-everyInterval
-		log.Infof("loading watches from mem...")
-		watchesJSON, _ := opts.Storage.Get("watches")
-
-		log.Infof("loading watches from db...")
+		// load watches
 		databaseWatches, err := watch.Load(watch.LoadOpts{
 			Connection: opts.Connection,
 		})
 		if err != nil {
-			log.Warnf("failed to load watches from db: %s", err)
+			log.Warnf("failed to load watches: %s", err)
 		}
-		log.Infof("%v watches loaded from db", len(databaseWatches))
+		log.Infof("loaded %v watches", len(databaseWatches))
 
-		// get floor price changes
-		log.Infof("loading floor price diffs from mem...")
-		floorPriceChanges, _ := opts.Storage.Get(StorageKeyFloorPriceChanges)
-		floorPriceChangesMap := types.CollectionDiffStorage{}
-		json.Unmarshal(floorPriceChanges, &floorPriceChangesMap)
-
-		log.Infof("loading floor price diffs from db...")
+		// load floor price changes
 		databaseFloorPriceDiffs, err := floorpricediff.Load(floorpricediff.LoadOpts{
 			Connection: opts.Connection,
 		})
 		if err != nil {
 			log.Warnf("failed to load watches from db: %s", err)
 		}
-		log.Infof("%v floor price differences loaded from db", len(databaseFloorPriceDiffs))
-
-		watchesMap := types.WatchStorage{}
-		json.Unmarshal(watchesJSON, &watchesMap)
-
-		for userID, watch := range watchesMap {
-			collectionsCount := 0
-			for collectionID, lastUpdated := range watch.CollectionMap {
-				collectionsCount += 1
-				watchLastUpdated, _ := strconv.ParseInt(lastUpdated, 10, 64)
-				floorPriceLastUpdated, _ := strconv.ParseInt(floorPriceChangesMap[collectionID].LastUpdated, 10, 64)
-				isUpdateDue := floorPriceLastUpdated > watchLastUpdated
-
-				if isUpdateDue {
-					previousFloorPrice := floorPriceChangesMap[collectionID].Previous.Data.FloorPrice
-					previousFloorPriceFloat, _ := strconv.ParseFloat(previousFloorPrice, 64)
-					currentFloorPrice := floorPriceChangesMap[collectionID].Current.Data.FloorPrice
-					currentFloorPriceFloat, _ := strconv.ParseFloat(currentFloorPrice, 64)
-
-					// send
-					chatID, _ := strconv.ParseInt(userID, 10, 64)
-					collectionInstance, _ := collection.GetCollectionByIdentifier(collectionID)
-					directionText := "🔻"
-					if currentFloorPriceFloat > previousFloorPriceFloat {
-						directionText = "🔼"
-					}
-					msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(
-						"🚨%s Floor price of [%s collection](https://app.ebisusbay.com/collection/%s) has changed from _%s_ CRO to *%s* CRO",
-						directionText,
-						collectionInstance.Label,
-						collectionInstance.ID,
-						previousFloorPrice,
-						currentFloorPrice,
-					))
-					msg.ParseMode = "markdown"
-					opts.Bot.Send(msg)
-
-					currentTimestamp := strconv.FormatInt(time.Now().Unix(), 10)
-					watchesMap[userID].CollectionMap[collectionID] = currentTimestamp
-				}
-			}
-			log.Infof("user[%s] is watching %v collections", userID, collectionsCount)
+		databaseFloorPriceDiffsMap := map[string]floorpricediff.FloorPriceDiff{}
+		for _, databaseFloorPriceDiff := range databaseFloorPriceDiffs {
+			databaseFloorPriceDiffsMap[databaseFloorPriceDiff.CollectionID] = databaseFloorPriceDiff
 		}
-		watchesJSON, _ = json.Marshal(watchesMap)
-		opts.Storage.Set("watches", watchesJSON)
-	}
+		log.Infof("loaded %v floor price differences", len(databaseFloorPriceDiffs))
 
+		// go through watches and check if last updated floor price is earlier than last user updatred
+		databaseUpdatedWatches := watch.Watches{}
+		for _, databaseWatch := range databaseWatches {
+			collectionID := databaseWatch.CollectionID
+			userLastUpdatedAt := databaseWatch.LastUpdated
+			floorPriceLastUpdatedAt := databaseFloorPriceDiffsMap[collectionID].LastUpdated
+			if floorPriceLastUpdatedAt.After(userLastUpdatedAt) {
+				collectionInstance, _ := collection.GetCollectionByIdentifier(collectionID)
+
+				// trigger user update
+				directionSymbol := constants.UserTextPriceDown
+				directionText := "down"
+				previousFloorPrice := databaseFloorPriceDiffsMap[collectionID].PreviousPrice
+				previousFloorPriceFloat, _ := strconv.ParseFloat(previousFloorPrice, 64)
+				currentFloorPrice := databaseFloorPriceDiffsMap[collectionID].CurrentPrice
+				currentFloorPriceFloat, _ := strconv.ParseFloat(currentFloorPrice, 64)
+				if currentFloorPriceFloat > previousFloorPriceFloat {
+					directionSymbol = constants.UserTextPriceUp
+					directionText = "up"
+				}
+				log.Infof("triggering floor price change message to chat[%v]...", databaseWatch.ChatID)
+				msg := tgbotapi.NewMessage(databaseWatch.ChatID, fmt.Sprintf(
+					"🚨%s [%s](https://app.ebisusbay.com/collection/%s) FP: *%s* CRO (%s from _%s_ CRO)",
+					directionSymbol,
+					collectionInstance.Label,
+					collectionInstance.ID,
+					currentFloorPrice,
+					directionText,
+					previousFloorPrice,
+				))
+				msg.ParseMode = "markdown"
+				opts.Bot.Send(msg)
+
+				databaseWatch.LastUpdated = time.Now()
+				databaseUpdatedWatches = append(databaseUpdatedWatches, databaseWatch)
+			}
+		}
+		if err := watch.Save(watch.SaveOpts{
+			Connection: opts.Connection,
+			Watches:    databaseUpdatedWatches,
+		}); err != nil {
+			log.Warnf("failed to save %v watches to database: %s", len(databaseUpdatedWatches), err)
+		} else {
+			log.Infof("updated %v watches", len(databaseUpdatedWatches))
+		}
+	}
 }

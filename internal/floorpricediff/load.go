@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 )
 
 type LoadOpts struct {
@@ -18,10 +20,9 @@ func Load(opts LoadOpts) (FloorPriceDiffs, error) {
 		"current_price",
 		"last_updated",
 	}
-	rows, err := connection.Query(fmt.Sprintf(
-		"SELECT %s FROM floor_price_diffs",
-		strings.Join(selectedColumns, ", "),
-	))
+	query := fmt.Sprintf("SELECT %s FROM floor_price_diffs", strings.Join(selectedColumns, ", "))
+	log.Debug(query)
+	rows, err := connection.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get collections: %s", err)
 	}

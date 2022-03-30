@@ -14,28 +14,28 @@ import (
 )
 
 const (
-	CALLBACK_WATCH_CONFIRM = "watch/confirm"
-	CALLBACK_WATCH_CANCEL  = "watch/cancel"
-	CALLBACK_WATCH_SELECT  = "watch/select"
+	CALLBACK_UNWATCH_CONFIRM = "unwatch/confirm"
+	CALLBACK_UNWATCH_CANCEL  = "unwatch/cancel"
+	CALLBACK_UNWATCH_SELECT  = "unwatch/select"
 )
 
-func getWatchKeyboard(collection string) tgbotapi.InlineKeyboardMarkup {
+func getUnwatchKeyboard(collection string) tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("WATCH", path.Join(CALLBACK_WATCH_CONFIRM, collection)),
-			tgbotapi.NewInlineKeyboardButtonData("CANCEL", CALLBACK_WATCH_CANCEL),
+			tgbotapi.NewInlineKeyboardButtonData("UNWATCH", path.Join(CALLBACK_UNWATCH_CONFIRM, collection)),
+			tgbotapi.NewInlineKeyboardButtonData("CANCEL", CALLBACK_UNWATCH_CANCEL),
 		),
 	)
 }
 
-func HandleWatch(opts Opts) error {
+func HandleUnwatch(opts Opts) error {
 	if opts.Update.CallbackQuery != nil {
-		return handleWatchCallback(opts)
+		return handleUnwatchCallback(opts)
 	}
-	return handleWatchCommand(opts)
+	return handleUnwatchCommand(opts)
 }
 
-func handleWatchCallback(opts Opts) error {
+func handleUnwatchCallback(opts Opts) error {
 	callbackData := opts.Update.CallbackQuery.Data
 	callback := strings.Split(callbackData, "/")
 	callbackAction := callback[1]
@@ -54,7 +54,7 @@ func handleWatchCallback(opts Opts) error {
 		callbackCollection := callback[2]
 		deleteMessageRequest := tgbotapi.NewDeleteMessage(chatID, opts.Update.CallbackQuery.Message.MessageID)
 		opts.Bot.Send(deleteMessageRequest)
-		return handleWatchConfirmation(opts, callbackCollection)
+		return handleUnwatchConfirmation(opts, callbackCollection)
 	case "confirm":
 		chatID := opts.Update.FromChat().ID
 		deleteMessageRequest := tgbotapi.NewDeleteMessage(chatID, opts.Update.CallbackQuery.Message.MessageID)
@@ -80,7 +80,7 @@ func handleWatchCallback(opts Opts) error {
 
 		callbackCollection := callback[2]
 
-		log.Infof("saving watch to db...")
+		log.Infof("removing watch to db...")
 		databaseWatchInstances := watch.Watches{
 			watch.Watch{
 				ChatID:       chatID,
@@ -88,16 +88,14 @@ func handleWatchCallback(opts Opts) error {
 				LastUpdated:  time.Now(),
 			},
 		}
-		watch.Save(watch.SaveOpts{
+		watch.Remove(watch.RemoveOpts{
 			Connection: opts.Connection,
 			Watches:    databaseWatchInstances,
 		})
 
 		collectionName := constants.CollectionByAddress[callbackCollection][0]
 		msg := tgbotapi.NewMessage(opts.Update.FromChat().ID, fmt.Sprintf(
-			"😍 I will notify you on changes to the [%s collection](https://app.ebisusbay.com/collection/%s) from now on! You may use /unwatch to unregister this should your interest in *%s* wane",
-			collectionName,
-			callbackCollection,
+			"💃🏻 I'll no longer be notifying you about *%s*!",
 			collectionName,
 		))
 		msg.ParseMode = "markdown"
@@ -111,15 +109,19 @@ func handleWatchCallback(opts Opts) error {
 	return nil
 }
 
-func handleWatchCommand(opts Opts) error {
+func handleUnwatchCommand(opts Opts) error {
 	collectionIdentifier := opts.Update.Message.CommandArguments()
 	if collectionIdentifier == "" {
-		collectionsInlineKeyboard, err := getUnwatchedCollectionsAsKeyboard(CALLBACK_WATCH_SELECT, opts.Update.FromChat().ID, opts.Connection)
+		collectionsInlineKeyboard, err := getWatchedCollectionsAsKeyboard(
+			CALLBACK_UNWATCH_SELECT,
+			opts.Update.FromChat().ID,
+			opts.Connection,
+		)
 		if err != nil {
-			return fmt.Errorf("failed to get collections as a keyboard: %s", err)
+			return fmt.Errorf("failed to get a keyboard with the watched collections: %s", err)
 		}
 		msg := tgbotapi.NewMessage(opts.Update.FromChat().ID, fmt.Sprintf(
-			"👋🏼 I sense interest in you, young one. Which collection shall I update you about?",
+			"👋🏼 Which collection would you like to unwatch?",
 		))
 		msg.ParseMode = "markdown"
 		msg.ReplyToMessageID = opts.Update.Message.MessageID
@@ -127,10 +129,10 @@ func handleWatchCommand(opts Opts) error {
 		_, err = opts.Bot.Send(msg)
 		return err
 	}
-	return handleWatchConfirmation(opts, collectionIdentifier)
+	return handleUnwatchConfirmation(opts, collectionIdentifier)
 }
 
-func handleWatchConfirmation(opts Opts, collectionIdentifier string) error {
+func handleUnwatchConfirmation(opts Opts, collectionIdentifier string) error {
 	collectionDetails, err := collection.GetCollectionByIdentifier(collectionIdentifier)
 	if err != nil {
 		msg := tgbotapi.NewMessage(opts.Update.FromChat().ID, fmt.Sprintf(
@@ -144,18 +146,14 @@ func handleWatchConfirmation(opts Opts, collectionIdentifier string) error {
 	}
 
 	msg := tgbotapi.NewMessage(opts.Update.FromChat().ID, fmt.Sprintf(
-		"👀 Interesting choice you have made. Shall I confirm *%s* collection with the token address `%s` as your destiny for today?\n\n"+
-			"👉🏼 Review on [Cronoscan](https://cronoscan.com/address/%s) | [Ebisus Bay](https://app.ebisusbay.com/collection/%s)",
+		"👀 Are you sure you would like to stop watching the *%s* collection?",
 		collectionDetails.Label,
-		collectionDetails.ID,
-		collectionDetails.ID,
-		collectionDetails.ID,
 	))
 	msg.ParseMode = "markdown"
 	if opts.Update.Message != nil {
 		msg.ReplyToMessageID = opts.Update.Message.MessageID
 	}
-	msg.ReplyMarkup = getWatchKeyboard(collectionDetails.ID)
+	msg.ReplyMarkup = getUnwatchKeyboard(collectionDetails.ID)
 	_, err = opts.Bot.Send(msg)
 	return err
 }

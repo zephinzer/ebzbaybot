@@ -49,7 +49,7 @@ func StartBot(opts StartBotOpts) error {
 		command := update.Message.Command()
 		switch true {
 		case command != "":
-			handleCommand(update, bot)
+			handleCommand(update, bot, opts.Connection)
 		default:
 			log.Infof("[%s] %s", update.Message.From.UserName, update.Message.Text)
 

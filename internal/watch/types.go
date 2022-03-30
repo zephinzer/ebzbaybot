@@ -5,7 +5,7 @@ import "time"
 type Watches []Watch
 
 type Watch struct {
-	ChatID       string    `json:"chatID"`
+	ChatID       int64     `json:"chatID"`
 	CollectionID string    `json:"collectionID"`
 	LastUpdated  time.Time `json:"lastUpdated"`
 }

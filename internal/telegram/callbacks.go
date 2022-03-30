@@ -31,6 +31,8 @@ func handleCallback(
 	switch handler {
 	case "list":
 		return handlers.HandleList(opts)
+	case "unwatch":
+		return handlers.HandleUnwatch(opts)
 	case "watch":
 		return handlers.HandleWatch(opts)
 	}

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	"path"
 	"sort"
@@ -8,11 +9,78 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/zephinzer/ebzbaybot/internal/collection"
+	"github.com/zephinzer/ebzbaybot/internal/watch"
 	"github.com/zephinzer/ebzbaybot/pkg/constants"
 	"github.com/zephinzer/ebzbaybot/pkg/ebzbay"
 )
 
-func getCollectionsAsKeyboard(callbackActionPrefix string) tgbotapi.InlineKeyboardMarkup {
+func getWatchedCollectionsAsKeyboard(callbackActionPrefix string, chatID int64, connection *sql.DB) (tgbotapi.InlineKeyboardMarkup, error) {
+	watches, err := watch.Load(watch.LoadOpts{
+		Connection: connection,
+		OnlyFor:    chatID,
+	})
+	if err != nil {
+		return tgbotapi.InlineKeyboardMarkup{}, fmt.Errorf("failed to load watches for chat[%v]: %s", chatID, err)
+	}
+	watchesMap := map[string]bool{}
+	for _, watchInstance := range watches {
+		watchesMap[watchInstance.CollectionID] = true
+	}
+
+	inlineKeyboardButtons := [][]tgbotapi.InlineKeyboardButton{}
+	collectionNames := []string{}
+	for address, names := range constants.CollectionByAddress {
+		if isWatching, exists := watchesMap[address]; isWatching && exists {
+			collectionNames = append(collectionNames, names[0])
+		}
+	}
+	sort.Strings(collectionNames)
+	for _, collectionName := range collectionNames {
+		collectionInstance, _ := collection.GetCollectionByIdentifier(collectionName)
+		inlineKeyboardButtons = append(
+			inlineKeyboardButtons,
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(collectionName, path.Join(callbackActionPrefix, collectionInstance.ID)),
+			),
+		)
+	}
+	return tgbotapi.NewInlineKeyboardMarkup(inlineKeyboardButtons...), nil
+}
+
+func getUnwatchedCollectionsAsKeyboard(callbackActionPrefix string, chatID int64, connection *sql.DB) (tgbotapi.InlineKeyboardMarkup, error) {
+	watches, err := watch.Load(watch.LoadOpts{
+		Connection: connection,
+		OnlyFor:    chatID,
+	})
+	if err != nil {
+		return tgbotapi.InlineKeyboardMarkup{}, fmt.Errorf("failed to load watches for chat[%v]: %s", chatID, err)
+	}
+	watchesMap := map[string]bool{}
+	for _, watchInstance := range watches {
+		watchesMap[watchInstance.CollectionID] = true
+	}
+
+	inlineKeyboardButtons := [][]tgbotapi.InlineKeyboardButton{}
+	collectionNames := []string{}
+	for address, names := range constants.CollectionByAddress {
+		if isWatching, exists := watchesMap[address]; !isWatching && !exists {
+			collectionNames = append(collectionNames, names[0])
+		}
+	}
+	sort.Strings(collectionNames)
+	for _, collectionName := range collectionNames {
+		collectionInstance, _ := collection.GetCollectionByIdentifier(collectionName)
+		inlineKeyboardButtons = append(
+			inlineKeyboardButtons,
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(collectionName, path.Join(callbackActionPrefix, collectionInstance.ID)),
+			),
+		)
+	}
+	return tgbotapi.NewInlineKeyboardMarkup(inlineKeyboardButtons...), nil
+}
+
+func getCollectionsAsKeyboard(callbackActionPrefix string) (tgbotapi.InlineKeyboardMarkup, error) {
 	inlineKeyboardButtons := [][]tgbotapi.InlineKeyboardButton{}
 	collectionNames := []string{}
 	for _, names := range constants.CollectionByAddress {
@@ -28,7 +96,7 @@ func getCollectionsAsKeyboard(callbackActionPrefix string) tgbotapi.InlineKeyboa
 			),
 		)
 	}
-	return tgbotapi.NewInlineKeyboardMarkup(inlineKeyboardButtons...)
+	return tgbotapi.NewInlineKeyboardMarkup(inlineKeyboardButtons...), nil
 }
 
 func sendCollectionDetails(opts Opts, stats *ebzbay.CollectionStats, details *collection.Collection) error {

@@ -5,6 +5,7 @@ WORKDIR /go/src/app
 COPY ./go.mod ./go.sum ./
 RUN go mod download -x
 COPY ./cmd ./cmd
+COPY ./data/migrations ./data/migrations
 COPY ./internal ./internal
 COPY ./pkg ./pkg
 COPY ./Makefile ./
@@ -15,7 +16,6 @@ ENV RELEASE_TAG=${RELEASE_TAG}
 RUN make release_tag=${RELEASE_TAG} build
 RUN mv ./bin/ebzbaybot_$(go env GOOS)_$(go env GOARCH) ./bin/ebzbaybot
 RUN mv ./bin/ebzbaybot_$(go env GOOS)_$(go env GOARCH).sha256 ./bin/ebzbaybot.sha256
-COPY ./data/migrations ./data/migrations
 
 FROM scratch AS final
 COPY --from=build /go/src/app/bin/ebzbaybot /ebzbaybot

@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 )
 
 type SaveOpts struct {
@@ -22,8 +24,7 @@ func Save(opts SaveOpts) error {
 		"last_updated",
 	}
 	onConflictUpdateColumns := []string{
-		"chat_id",
-		"collection_id",
+		"last_updated",
 	}
 	for i := 0; i < len(onConflictUpdateColumns); i++ {
 		onConflictUpdateColumns[i] = fmt.Sprintf(
@@ -32,7 +33,6 @@ func Save(opts SaveOpts) error {
 			onConflictUpdateColumns[i],
 		)
 	}
-	onConflictUpdateColumns = append(onConflictUpdateColumns, "last_updated = NOW()")
 
 	// prepare main statement
 	globalParameterCount := 1
@@ -67,7 +67,7 @@ func Save(opts SaveOpts) error {
 	)
 	combinedTransactions.WriteString(";\n")
 
-	fmt.Println(combinedTransactions.String())
+	log.Debug(combinedTransactions.String())
 	_, err := connection.Exec(
 		combinedTransactions.String(),
 		parameterValues...,

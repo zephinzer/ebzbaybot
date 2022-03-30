@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 )
 
 type LoadOpts struct {
@@ -11,7 +13,7 @@ type LoadOpts struct {
 	Connection *sql.DB
 }
 
-func Load(opts LoadOpts) (Collections, error) {
+func LoadAll(opts LoadOpts) (Collections, error) {
 	connection := opts.Connection
 	selectedColumns := []string{
 		"id",
@@ -25,11 +27,10 @@ func Load(opts LoadOpts) (Collections, error) {
 		"total_volume",
 		"last_updated",
 	}
-	rows, err := connection.Query(
-		fmt.Sprintf(
-			"SELECT %s FROM collections",
-			strings.Join(selectedColumns, ", ")),
-	)
+	query := fmt.Sprintf("SELECT %s FROM collections", strings.Join(selectedColumns, ", "))
+
+	log.Debug(query)
+	rows, err := connection.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get collections: %s", err)
 	}
