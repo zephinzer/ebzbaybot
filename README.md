@@ -1,8 +1,14 @@
 # EbzBot
 
-This is an unofficial Ebisus Bay Bot for easily monitoring price changes on Telegram.
+This is an unofficial Ebisus Bay Bot for easily monitoring floor price changes on Telegram.
 
-Talk to the bot at https://t.me/ebzbaybot
+Talk to the bot at https://t.me/ebzbaybot for a customised experience. Otherwise, pre-set channels for various collections include (basically collections I watch):
+
+1. [Mad Meerkats](https://t.me/ebzbay_mmkfp)
+2. [MM Treehouses](https://t.me/ebzbay_mmtfp)
+3. [Cronos Primate Business](https://t.me/ebzbay_cpbfp)
+4. [Nifty Nanas](https://t.me/ebzbay_nanasfp)
+5. [Lolita & Friends](https://t.me/ebzbay_lolitasfp)
 
 # Contributing
 
@@ -18,17 +24,17 @@ Talk to the bot at https://t.me/ebzbaybot
 
 The whitelisted collection list can be found at [`./pkg/constants/data.json`](./pkg/constants/data.json). That should be where you're raising a pull request to whitelist a collection.
 
-## Releasing
+## Releasing this service
 
 Run `make release release_tag=$(git rev-parse HEAD | head -c 8)` to create and push the artifact.
 
-## Deploying
+## Deploying this service
 
-This service's tooling was created around deploying on Digital Ocean (DO) App Platform.
+This service's tooling was created around deploying on Digital Ocean (DO) App Platform because it's simpler and more affordable.
 
-To create the required resources, go to the DO App Platform and use a Docker image as the type of application. Use `zephinzer/ebzbaybot:d22deec0` (or find the latest tag on [DockerHub](https://hub.docker.com/r/zephinzer/ebzbaybot) as the image source). Also, create and attach a database to it and change the default injected environment variable from `DATABASE_URL` to `POSTGRES_URL`.
+To create the required resources, go to the DO App Platform and use a Docker image as the type of application. Use `zephinzer/ebzbaybot` (find the latest image tag on [DockerHub](https://hub.docker.com/r/zephinzer/ebzbaybot) as the image source). Also, create and attach a database to it and change the default injected environment variable from `DATABASE_URL` to `POSTGRES_URL`.
 
-To deploy a new release, navigate to the application in DO and change the image repository tag. Hit the Deploy after that.
+To deploy a new release, navigate to the application in DO and change the image repository tag. The application should automagically deploy itself.
 
 
 # Licensing
