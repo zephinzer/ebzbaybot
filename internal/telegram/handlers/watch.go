@@ -33,6 +33,9 @@ func HandleWatch(opts Opts) error {
 	if opts.Update.CallbackQuery != nil {
 		return handleWatchCallback(opts)
 	}
+	if opts.Update.ChannelPost != nil {
+		return handleWatchChannel(opts)
+	}
 	return handleWatchCommand(opts)
 }
 
@@ -63,6 +66,17 @@ func handleWatchCallback(opts Opts) error {
 		removeOriginalMessage = false
 		fallthrough
 	case "confirm":
+		// do not allow in channels
+		// fmt.Println()
+		// if opts.Update.FromChat() != nil {
+		// 	msg := tgbotapi.NewMessageToChannel("@"+opts.Update.ChannelPost.Chat.UserName, fmt.Sprintf(
+		// 		"⚠️ Watching a collection is only possible when you're talking to me directly. Try hitting me up personally @EbzBayBot 😙",
+		// 	))
+		// 	msg.ParseMode = "markdown"
+		// 	msg.ReplyToMessageID = opts.Update.CallbackQuery.Message.MessageID
+		// 	_, err := opts.Bot.Send(msg)
+		// 	return err
+		// }
 		chatID := opts.Update.FromChat().ID
 		if removeOriginalMessage {
 			deleteMessageRequest := tgbotapi.NewDeleteMessage(chatID, opts.Update.CallbackQuery.Message.MessageID)
@@ -97,10 +111,12 @@ func handleWatchCallback(opts Opts) error {
 				LastUpdated:  time.Now(),
 			},
 		}
-		watch.Save(watch.SaveOpts{
+		if err := watch.Save(watch.SaveOpts{
 			Connection: opts.Connection,
 			Watches:    databaseWatchInstances,
-		})
+		}); err != nil {
+			log.Warnf("failed to save watch in chat[%v] for collection[%s]: %s", chatID, callbackCollection, err)
+		}
 
 		collectionName := constants.CollectionByAddress[callbackCollection][0]
 		msg := tgbotapi.NewMessage(opts.Update.FromChat().ID, fmt.Sprintf(
@@ -118,6 +134,40 @@ func handleWatchCallback(opts Opts) error {
 		return err
 	}
 	return nil
+}
+
+func handleWatchChannel(opts Opts) error {
+	chatID := opts.Update.ChannelPost.Chat.UserName
+	collectionID := opts.Update.ChannelPost.CommandArguments()
+	collectionDetails, err := collection.GetCollectionByIdentifier(collectionID)
+	if err != nil {
+		log.Warnf("failed to get collection identified by '%s': %s", collectionID, err)
+		return fmt.Errorf("failed to get collection")
+	}
+
+	if err := watch.SaveChannel(watch.SaveChannelOpts{
+		Connection: opts.Connection,
+		Watches: watch.ChannelWatches{
+			{
+				ChatID:       chatID,
+				CollectionID: collectionDetails.ID,
+			},
+		},
+	}); err != nil {
+		log.Warnf("failed to save channel watch on collection[%s] for channel[%s]: %s", collectionDetails.ID, chatID, err)
+		_, err = opts.Bot.Send(tgbotapi.NewMessageToChannel(
+			"@"+chatID,
+			fmt.Sprintf("Something went wrong while trying to watch the *%s* collection. See logs for more information", collectionDetails.Label),
+		))
+		return err
+	}
+	msg := tgbotapi.NewMessageToChannel(
+		"@"+chatID,
+		fmt.Sprintf("I will notify this channel for updates on the *%s* collection", collectionDetails.Label),
+	)
+	msg.ParseMode = "markdown"
+	_, err = opts.Bot.Send(msg)
+	return err
 }
 
 func handleWatchCommand(opts Opts) error {

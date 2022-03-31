@@ -126,27 +126,29 @@ func sendCollectionDetails(opts Opts, stats *ebzbay.CollectionStats, details *co
 		details.ID,
 	))
 	responseMessage.ParseMode = "markdown"
-	watchExists, err := watch.Exists(watch.ExistsOpts{
-		Connection:   opts.Connection,
-		ChatID:       chatID,
-		CollectionID: details.ID,
-	})
-	if err != nil {
-		log.Warnf("failed to check whether watch exists for chat[%s] and collection[%s]: %s", chatID, details.ID, err)
-	}
-	if !watchExists {
-		responseMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData(
-					"WATCH THIS COLLECTION",
-					path.Join(
-						CALLBACK_WATCH_CONFIRM_NO_DELETE,
-						details.ID,
+	if !opts.Update.FromChat().IsChannel() {
+		watchExists, err := watch.Exists(watch.ExistsOpts{
+			Connection:   opts.Connection,
+			ChatID:       chatID,
+			CollectionID: details.ID,
+		})
+		if err != nil {
+			log.Warnf("failed to check whether watch exists for chat[%s] and collection[%s]: %s", chatID, details.ID, err)
+		}
+		if !watchExists {
+			responseMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonData(
+						"WATCH THIS COLLECTION",
+						path.Join(
+							CALLBACK_WATCH_CONFIRM_NO_DELETE,
+							details.ID,
+						),
 					),
 				),
-			),
-		)
+			)
+		}
 	}
-	_, err = opts.Bot.Send(responseMessage)
+	_, err := opts.Bot.Send(responseMessage)
 	return err
 }

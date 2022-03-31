@@ -7,6 +7,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/zephinzer/ebzbaybot/internal/lifecycle"
 	"github.com/zephinzer/ebzbaybot/internal/storage"
+	"github.com/zephinzer/ebzbaybot/internal/telegram/handlers"
 	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 )
 
@@ -34,7 +35,40 @@ func StartBot(opts StartBotOpts) error {
 			Storage:    opts.Storage,
 		})
 	}()
+	go func() {
+		lifecycle.StartUpdatingChannelWatchers(lifecycle.WatchingOpts{
+			Bot:        bot,
+			Connection: opts.Connection,
+			Storage:    opts.Storage,
+		})
+	}()
 	for update := range updates {
+		if update.ChannelPost != nil {
+			collectionIdentifier := update.ChannelPost.CommandArguments()
+			switch update.ChannelPost.Command() {
+			case "init":
+				if collectionIdentifier == "" {
+					if _, err := bot.Send(tgbotapi.NewMessageToChannel(
+						"@"+update.ChannelPost.Chat.UserName,
+						"Missing a collection identifier!",
+					)); err != nil {
+						log.Warnf("failed to send message to channel: %s", err)
+					}
+				}
+				handlers.HandleWatch(handlers.Opts{
+					Update:     update,
+					Bot:        bot,
+					Connection: opts.Connection,
+				})
+			case "start":
+				if _, err := bot.Send(tgbotapi.NewMessageToChannel(
+					"@"+update.ChannelPost.Chat.UserName,
+					"Initialise this channel by using /init followed by the collection identifier",
+				)); err != nil {
+					log.Warnf("failed to send message to channel: %s", err)
+				}
+			}
+		}
 		if update.CallbackQuery != nil {
 			handleCallback(
 				update,
