@@ -11,7 +11,6 @@ import (
 	"github.com/zephinzer/ebzbaybot/internal/collection"
 	"github.com/zephinzer/ebzbaybot/internal/constants"
 	"github.com/zephinzer/ebzbaybot/internal/floorpricediff"
-	"github.com/zephinzer/ebzbaybot/internal/storage"
 	"github.com/zephinzer/ebzbaybot/internal/telegram/handlers"
 	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 	"github.com/zephinzer/ebzbaybot/internal/watch"
@@ -20,7 +19,6 @@ import (
 type WatchingOpts struct {
 	Bot        *tgbotapi.BotAPI
 	Connection *sql.DB
-	Storage    storage.Storage
 }
 
 func StartUpdatingWatchers(opts WatchingOpts) error {

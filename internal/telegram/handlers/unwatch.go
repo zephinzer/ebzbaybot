@@ -59,15 +59,6 @@ func handleUnwatchCallback(opts Opts) error {
 		chatID := opts.Update.FromChat().ID
 		deleteMessageRequest := tgbotapi.NewDeleteMessage(chatID, opts.Update.CallbackQuery.Message.MessageID)
 		opts.Bot.Send(deleteMessageRequest)
-		if opts.Storage == nil {
-			msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(
-				"⚠️ I couldn't store this information because the dev forgot to add a storage component to me",
-			))
-			msg.ParseMode = "markdown"
-			msg.ReplyToMessageID = opts.Update.CallbackQuery.Message.MessageID
-			_, err := opts.Bot.Send(msg)
-			return err
-		}
 		if len(callback) < 3 {
 			msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(
 				"⚠️ Something messed up, sorry - I did not find a collection to watch in my callback",
@@ -80,7 +71,7 @@ func handleUnwatchCallback(opts Opts) error {
 
 		callbackCollection := callback[2]
 
-		log.Infof("removing watch to db...")
+		log.Infof("removing watch for chat/collection[%s/%s]...", chatID, callbackCollection)
 		databaseWatchInstances := watch.Watches{
 			watch.Watch{
 				ChatID:       chatID,

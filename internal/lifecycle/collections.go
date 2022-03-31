@@ -6,7 +6,6 @@ import (
 
 	"github.com/zephinzer/ebzbaybot/internal/collection"
 	"github.com/zephinzer/ebzbaybot/internal/floorpricediff"
-	"github.com/zephinzer/ebzbaybot/internal/storage"
 	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 	"github.com/zephinzer/ebzbaybot/pkg/ebzbay"
 )
@@ -22,7 +21,6 @@ const (
 type ScrapingOpts struct {
 	Connection     *sql.DB
 	ScrapeInterval time.Duration
-	Storage        storage.Storage
 }
 
 func StartCollectionsScraping(opts ScrapingOpts) {

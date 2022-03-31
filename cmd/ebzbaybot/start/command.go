@@ -10,7 +10,6 @@ import (
 	"github.com/usvc/go-config"
 	"github.com/zephinzer/ebzbaybot/internal/database"
 	"github.com/zephinzer/ebzbaybot/internal/lifecycle"
-	"github.com/zephinzer/ebzbaybot/internal/storage"
 	"github.com/zephinzer/ebzbaybot/internal/telegram"
 	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 )
@@ -18,7 +17,6 @@ import (
 const (
 	ConfigKeyMigrationsPath    = "migrations-path"
 	ConfigKeyPostgresURL       = "postgres-url"
-	ConfigKeyStorageConfig     = "storage-config"
 	ConfigKeyTelegramBotApiKey = "telegram-bot-api-key"
 )
 
@@ -30,11 +28,6 @@ var conf = config.Map{
 	ConfigKeyPostgresURL: &config.String{
 		Shorthand: "d",
 		Default:   "postgres://user:password@localhost:35432/database?sslmode=disable",
-	},
-	ConfigKeyStorageConfig: &config.String{
-		Shorthand: "s",
-		Default:   "memory",
-		Usage:     "Define the storage type",
 	},
 	ConfigKeyTelegramBotApiKey: &config.String{
 		Shorthand: "k",
@@ -78,13 +71,6 @@ func runE(cmd *cobra.Command, args []string) error {
 	if botToken == "" {
 		return fmt.Errorf("failed to receive a telegram bot token, pass it in with --%s", ConfigKeyTelegramBotApiKey)
 	}
-	var storageInstance storage.Storage
-	switch conf.GetString(ConfigKeyStorageConfig) {
-	case "memory":
-		fallthrough
-	default:
-		storageInstance = storage.NewMemory()
-	}
 
 	var waiter sync.WaitGroup
 
@@ -95,7 +81,6 @@ func runE(cmd *cobra.Command, args []string) error {
 		lifecycle.StartCollectionsScraping(lifecycle.ScrapingOpts{
 			Connection:     connection,
 			ScrapeInterval: lifecycleInterval,
-			Storage:        storageInstance,
 		})
 		waiter.Done()
 	}()
@@ -105,7 +90,6 @@ func runE(cmd *cobra.Command, args []string) error {
 			ApiKey:         botToken,
 			Connection:     connection,
 			IsDebugEnabled: false,
-			Storage:        storageInstance,
 		}); err != nil {
 			log.Errorf("failed to keep bot alive: %s", err)
 			waiter.Done()

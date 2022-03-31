@@ -66,30 +66,10 @@ func handleWatchCallback(opts Opts) error {
 		removeOriginalMessage = false
 		fallthrough
 	case "confirm":
-		// do not allow in channels
-		// fmt.Println()
-		// if opts.Update.FromChat() != nil {
-		// 	msg := tgbotapi.NewMessageToChannel("@"+opts.Update.ChannelPost.Chat.UserName, fmt.Sprintf(
-		// 		"⚠️ Watching a collection is only possible when you're talking to me directly. Try hitting me up personally @EbzBayBot 😙",
-		// 	))
-		// 	msg.ParseMode = "markdown"
-		// 	msg.ReplyToMessageID = opts.Update.CallbackQuery.Message.MessageID
-		// 	_, err := opts.Bot.Send(msg)
-		// 	return err
-		// }
 		chatID := opts.Update.FromChat().ID
 		if removeOriginalMessage {
 			deleteMessageRequest := tgbotapi.NewDeleteMessage(chatID, opts.Update.CallbackQuery.Message.MessageID)
 			opts.Bot.Send(deleteMessageRequest)
-		}
-		if opts.Storage == nil {
-			msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(
-				"⚠️ I couldn't store this information because the dev forgot to add a storage component to me",
-			))
-			msg.ParseMode = "markdown"
-			msg.ReplyToMessageID = opts.Update.CallbackQuery.Message.MessageID
-			_, err := opts.Bot.Send(msg)
-			return err
 		}
 		if len(callback) < 3 {
 			msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(

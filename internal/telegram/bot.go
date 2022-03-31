@@ -6,7 +6,6 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/zephinzer/ebzbaybot/internal/lifecycle"
-	"github.com/zephinzer/ebzbaybot/internal/storage"
 	"github.com/zephinzer/ebzbaybot/internal/telegram/handlers"
 	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 )
@@ -15,7 +14,6 @@ type StartBotOpts struct {
 	ApiKey         string
 	Connection     *sql.DB
 	IsDebugEnabled bool
-	Storage        storage.Storage
 }
 
 func StartBot(opts StartBotOpts) error {
@@ -32,14 +30,12 @@ func StartBot(opts StartBotOpts) error {
 		lifecycle.StartUpdatingWatchers(lifecycle.WatchingOpts{
 			Bot:        bot,
 			Connection: opts.Connection,
-			Storage:    opts.Storage,
 		})
 	}()
 	go func() {
 		lifecycle.StartUpdatingChannelWatchers(lifecycle.WatchingOpts{
 			Bot:        bot,
 			Connection: opts.Connection,
-			Storage:    opts.Storage,
 		})
 	}()
 	for update := range updates {
@@ -73,7 +69,6 @@ func StartBot(opts StartBotOpts) error {
 			handleCallback(
 				update,
 				bot,
-				opts.Storage,
 				opts.Connection,
 			)
 		}

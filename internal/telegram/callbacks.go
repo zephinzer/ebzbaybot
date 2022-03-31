@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/zephinzer/ebzbaybot/internal/storage"
 	"github.com/zephinzer/ebzbaybot/internal/telegram/handlers"
 	"github.com/zephinzer/ebzbaybot/internal/utils/log"
 )
@@ -13,14 +12,12 @@ import (
 func handleCallback(
 	update tgbotapi.Update,
 	bot *tgbotapi.BotAPI,
-	storageInstance storage.Storage,
 	connection *sql.DB,
 ) error {
 	log.Infof("callback[%s] %s", update.CallbackQuery.ID, update.CallbackQuery.Data)
 	opts := handlers.Opts{
 		Bot:        bot,
 		Connection: connection,
-		Storage:    storageInstance,
 		Update:     update,
 	}
 	callbackData := strings.Split(update.CallbackQuery.Data, "/")
