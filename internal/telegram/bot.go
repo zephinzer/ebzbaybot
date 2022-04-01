@@ -43,6 +43,7 @@ func StartBot(opts StartBotOpts) error {
 			collectionIdentifier := update.ChannelPost.CommandArguments()
 			switch update.ChannelPost.Command() {
 			case "init":
+				fmt.Println("HI")
 				if collectionIdentifier == "" {
 					if _, err := bot.Send(tgbotapi.NewMessageToChannel(
 						"@"+update.ChannelPost.Chat.UserName,

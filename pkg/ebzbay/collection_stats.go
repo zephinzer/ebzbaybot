@@ -15,6 +15,10 @@ type CollectionStats struct {
 	FloorPrice            float64 `json:"floorPrice"`
 	AverageLowestTenPrice float64 `json:"averageLowestTenPrice"`
 	Listings              int64   `json:"listings"`
+	FloorListingID        string  `json:"floorListingID"`
+	FloorImageURL         string  `json:"floorImageURL"`
+	FloorEdition          string  `json:"floorEdition"`
+	FloorScore            string  `json:"floorScore"`
 }
 
 func getCollectionStatsParams(page, collection, sortBy, direction string) map[string]string {
@@ -49,12 +53,20 @@ func GetCollectionStats(collection string) *CollectionStats {
 	var listingResponse ListingResponse
 	json.Unmarshal(body, &listingResponse)
 	var totalPrice float64
+
+	// process floor item details
+	var floorListingID string
+	var floorImageURL string
+	var floorEdition string
+	var floorScore string
+	if listingResponse.Listings != nil && len(listingResponse.Listings) > 0 {
+		floorListing := listingResponse.Listings[0]
+		floorListingID = strconv.FormatInt(floorListing.ListingID, 10)
+		floorImageURL = floorListing.NFT.OriginalImage
+		floorEdition = strconv.FormatInt(floorListing.NFT.Edition, 10)
+		floorScore = strconv.FormatFloat(floorListing.NFT.Score, 'f', 2, 64)
+	}
 	for _, listing := range listingResponse.Listings {
-		// timeNow := time.Now()
-		// timeListed := time.Unix(listing.ListingTime, 0)
-		// timeSinceInMinutes := timeNow.Sub(timeListed).Minutes()
-		// hoursSince := int64(timeSinceInMinutes) / 60
-		// minutesSince := int64(timeSinceInMinutes) - hoursSince*60
 		formattedPrice, _ := strconv.ParseFloat(listing.Price, 64)
 		totalPrice += formattedPrice
 	}
@@ -64,6 +76,10 @@ func GetCollectionStats(collection string) *CollectionStats {
 		AverageLowestTenPrice: averageLowestPrice,
 		FloorPrice:            floorPrice,
 		Listings:              listingResponse.TotalCount,
+		FloorListingID:        floorListingID,
+		FloorImageURL:         floorImageURL,
+		FloorEdition:          floorEdition,
+		FloorScore:            floorScore,
 	}
 	return &collectionStats
 }

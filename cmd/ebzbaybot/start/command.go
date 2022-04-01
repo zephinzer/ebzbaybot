@@ -77,7 +77,7 @@ func runE(cmd *cobra.Command, args []string) error {
 	waiter.Add(1)
 
 	go func() {
-		lifecycleInterval := 10 * time.Second
+		lifecycleInterval := 7 * time.Second
 		lifecycle.StartCollectionsScraping(lifecycle.ScrapingOpts{
 			Connection:     connection,
 			ScrapeInterval: lifecycleInterval,

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -51,41 +52,65 @@ func StartUpdatingWatchers(opts WatchingOpts) error {
 		updatedChatWatches := watch.Watches{}
 		for _, databaseWatch := range chatWatches {
 			collectionID := databaseWatch.CollectionID
+			floorPriceDiff := floorPriceDiffsMap[collectionID]
 			userLastUpdatedAt := databaseWatch.LastUpdated
-			floorPriceLastUpdatedAt := floorPriceDiffsMap[collectionID].LastUpdated
+			floorPriceLastUpdatedAt := floorPriceDiff.LastUpdated
 			if floorPriceLastUpdatedAt.After(userLastUpdatedAt) {
 				collectionInstance, _ := collection.GetCollectionByIdentifier(collectionID)
 
 				// trigger user update
 				directionSymbol := constants.UserTextPriceDown
 				directionText := "down"
-				previousFloorPrice := floorPriceDiffsMap[collectionID].PreviousPrice
+				previousFloorPrice := floorPriceDiff.PreviousPrice
+				currentFloorPrice := floorPriceDiff.CurrentPrice
+
+				// this was added because of a very weird and flaky bug
+				// that i cannot catch where a floor price diff was added
+				// even though the prices is the same
+				if strings.Compare(previousFloorPrice, currentFloorPrice) == 0 {
+					continue
+				}
+
 				previousFloorPriceFloat, _ := strconv.ParseFloat(previousFloorPrice, 64)
-				currentFloorPrice := floorPriceDiffsMap[collectionID].CurrentPrice
 				currentFloorPriceFloat, _ := strconv.ParseFloat(currentFloorPrice, 64)
 				if currentFloorPriceFloat > previousFloorPriceFloat {
 					directionSymbol = constants.UserTextPriceUp
 					directionText = "up"
 				}
+
 				log.Infof("triggering floor price change message to chat[%v]...", databaseWatch.ChatID)
 				msg := tgbotapi.NewMessage(databaseWatch.ChatID, fmt.Sprintf(
-					"🚨%s [%s](https://app.ebisusbay.com/collection/%s) FP: *%s* CRO (%s from _%s_ CRO)",
+					"[🚨](%s)%s [%s](https://app.ebisusbay.com/collection/%s) FP: *%s* CRO (%s from _%s_ CRO)\n\n"+
+						"Edition/Score : *#%s* / _%s_",
+					*floorPriceDiff.ImageURL,
 					directionSymbol,
 					collectionInstance.Label,
 					collectionInstance.ID,
 					currentFloorPrice,
 					directionText,
 					previousFloorPrice,
+					*floorPriceDiff.Edition,
+					*floorPriceDiff.Score,
 				))
 				msg.ParseMode = "markdown"
 				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 					tgbotapi.NewInlineKeyboardRow(
 						tgbotapi.NewInlineKeyboardButtonData(
-							"SHOW COLLECTION INFO",
+							"👀 COLLECTION INFO",
 							path.Join(
 								handlers.CALLBACK_LIST_GET_NO_DELETE,
 								collectionInstance.ID,
 							),
+						),
+					),
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonURL(
+							"🔗 BROWSER",
+							fmt.Sprintf("https://app.ebisusbay.com/listing/%s", *floorPriceDiff.ListingID),
+						),
+						tgbotapi.NewInlineKeyboardButtonURL(
+							"📲 METAMASK",
+							fmt.Sprintf("https://metamask.app.link/dapp/app.ebisusbay.com/listing/%s", *floorPriceDiff.ListingID),
 						),
 					),
 				)

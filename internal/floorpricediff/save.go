@@ -22,11 +22,19 @@ func Save(opts SaveOpts) error {
 		"collection_id",
 		"previous_price",
 		"current_price",
+		"listing_id",
+		"image_url",
+		"edition",
+		"score",
 		"last_updated",
 	}
 	onConflictUpdateColumns := []string{
 		"previous_price",
 		"current_price",
+		"listing_id",
+		"image_url",
+		"edition",
+		"score",
 	}
 	for i := 0; i < len(onConflictUpdateColumns); i++ {
 		onConflictUpdateColumns[i] = fmt.Sprintf(
@@ -61,6 +69,10 @@ func Save(opts SaveOpts) error {
 			floorPriceDiff.CollectionID,
 			floorPriceDiff.PreviousPrice,
 			floorPriceDiff.CurrentPrice,
+			floorPriceDiff.ListingID,
+			floorPriceDiff.ImageURL,
+			floorPriceDiff.Edition,
+			floorPriceDiff.Score,
 			"NOW()",
 		)
 	}

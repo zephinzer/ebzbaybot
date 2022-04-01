@@ -63,13 +63,15 @@ func StartCollectionsScraping(opts ScrapingOpts) {
 		}
 		log.Infof("processing %v/%v collections from api", len(currentCollections), len(currentEbzbayCollections))
 		currentCollectionsMap := map[string]collection.Collection{}
-		for _, currentDatabaseCollection := range currentCollections {
+		currentCollectionsIndexMap := map[string]int{}
+		for index, currentDatabaseCollection := range currentCollections {
 			currentCollectionsMap[currentDatabaseCollection.ID] = currentDatabaseCollection
+			currentCollectionsIndexMap[currentDatabaseCollection.ID] = index
 		}
 
 		// process differences
 		newDatabaseCollectionsCount := 0
-		databaseFloorPriceDiffs := floorpricediff.FloorPriceDiffs{}
+		floorPriceDiffs := floorpricediff.FloorPriceDiffs{}
 		for currentCollectionKey, currentCollection := range currentCollectionsMap {
 			if _, exists := previousCollectionsMap[currentCollectionKey]; !exists {
 				newDatabaseCollectionsCount += 1
@@ -78,8 +80,8 @@ func StartCollectionsScraping(opts ScrapingOpts) {
 			previousPrice := previousCollectionsMap[currentCollectionKey].FloorPrice
 			currentPrice := currentCollection.FloorPrice
 			if previousPrice != currentPrice {
-				databaseFloorPriceDiffs = append(
-					databaseFloorPriceDiffs,
+				floorPriceDiffs = append(
+					floorPriceDiffs,
 					floorpricediff.FloorPriceDiff{
 						CollectionID:  currentCollectionKey,
 						PreviousPrice: previousPrice,
@@ -89,12 +91,20 @@ func StartCollectionsScraping(opts ScrapingOpts) {
 				)
 			}
 		}
-		log.Infof("evaluated %v changes in floor prices", len(databaseFloorPriceDiffs))
+		log.Infof("evaluated %v changes in floor prices", len(floorPriceDiffs))
+
+		for i := 0; i < len(floorPriceDiffs); i++ {
+			floorCollectionStats := ebzbay.GetCollectionStats(floorPriceDiffs[i].CollectionID)
+			floorPriceDiffs[i].ListingID = &floorCollectionStats.FloorListingID
+			floorPriceDiffs[i].ImageURL = &floorCollectionStats.FloorImageURL
+			floorPriceDiffs[i].Edition = &floorCollectionStats.FloorEdition
+			floorPriceDiffs[i].Score = &floorCollectionStats.FloorScore
+		}
 
 		// save floor prices
 		if err := floorpricediff.Save(floorpricediff.SaveOpts{
 			Connection:      opts.Connection,
-			FloorPriceDiffs: databaseFloorPriceDiffs,
+			FloorPriceDiffs: floorPriceDiffs,
 		}); err != nil {
 			log.Warnf("failed to save floor price diffs to db: %s", err)
 		}

@@ -18,6 +18,7 @@ type Listing struct {
 
 type NFT struct {
 	Name                 string            `json:"name"`
+	Edition              int64             `json:"edition"`
 	NftAddress           string            `json:"nftAddress"`
 	NftID                string            `json:"nftId"`
 	OriginalImage        string            `json:"original_image"`

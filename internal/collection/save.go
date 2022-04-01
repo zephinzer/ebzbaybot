@@ -84,7 +84,7 @@ func Save(opts SaveOpts) error {
 	)
 	combinedTransactions.WriteString(";\n")
 
-	log.Debug(combinedTransactions.String())
+	log.Debug(parameterValues)
 	_, err := connection.Exec(
 		combinedTransactions.String(),
 		parameterValues...,

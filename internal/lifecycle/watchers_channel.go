@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -14,7 +15,7 @@ import (
 )
 
 func StartUpdatingChannelWatchers(opts WatchingOpts) error {
-	everyInterval := time.NewTicker(5 * time.Second).C
+	everyInterval := time.NewTicker(3 * time.Second).C
 	for {
 		<-everyInterval
 		// load watches
@@ -43,17 +44,26 @@ func StartUpdatingChannelWatchers(opts WatchingOpts) error {
 		updatedChannelWatches := watch.ChannelWatches{}
 		for _, channelWatch := range channelWatches {
 			collectionID := channelWatch.CollectionID
+			floorPriceDiff := floorPriceDiffsMap[collectionID]
 			userLastUpdatedAt := channelWatch.LastUpdated
-			floorPriceLastUpdatedAt := floorPriceDiffsMap[collectionID].LastUpdated
+			floorPriceLastUpdatedAt := floorPriceDiff.LastUpdated
 			if floorPriceLastUpdatedAt.After(userLastUpdatedAt) {
 				collectionInstance, _ := collection.GetCollectionByIdentifier(collectionID)
 
 				// trigger user update
 				directionSymbol := constants.UserTextPriceDown
 				directionText := "down"
-				previousFloorPrice := floorPriceDiffsMap[collectionID].PreviousPrice
+				previousFloorPrice := floorPriceDiff.PreviousPrice
+				currentFloorPrice := floorPriceDiff.CurrentPrice
+
+				// this was added because of a very weird and flaky bug
+				// that i cannot catch where a floor price diff was added
+				// even though the prices is the same
+				if strings.Compare(previousFloorPrice, currentFloorPrice) == 0 {
+					continue
+				}
+
 				previousFloorPriceFloat, _ := strconv.ParseFloat(previousFloorPrice, 64)
-				currentFloorPrice := floorPriceDiffsMap[collectionID].CurrentPrice
 				currentFloorPriceFloat, _ := strconv.ParseFloat(currentFloorPrice, 64)
 				if currentFloorPriceFloat > previousFloorPriceFloat {
 					directionSymbol = constants.UserTextPriceUp
@@ -61,14 +71,30 @@ func StartUpdatingChannelWatchers(opts WatchingOpts) error {
 				}
 				log.Infof("triggering floor price change message to channel[%s]...", channelWatch.ChatID)
 				msg := tgbotapi.NewMessageToChannel("@"+channelWatch.ChatID, fmt.Sprintf(
-					"🚨%s [%s](https://app.ebisusbay.com/collection/%s) FP: *%s* CRO (%s from _%s_ CRO)",
+					"[🚨](%s)%s [%s](https://app.ebisusbay.com/collection/%s) FP: *%s* CRO (%s from _%s_ CRO)\n\n"+
+						"Edition/Score : *#%s* / _%s_",
+					*floorPriceDiff.ImageURL,
 					directionSymbol,
 					collectionInstance.Label,
 					collectionInstance.ID,
 					currentFloorPrice,
 					directionText,
 					previousFloorPrice,
+					*floorPriceDiff.Edition,
+					*floorPriceDiff.Score,
 				))
+				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonURL(
+							"🔗 BROWSER",
+							fmt.Sprintf("https://app.ebisusbay.com/listing/%s", *floorPriceDiff.ListingID),
+						),
+						tgbotapi.NewInlineKeyboardButtonURL(
+							"📲 METAMASK",
+							fmt.Sprintf("https://metamask.app.link/dapp/app.ebisusbay.com/listing/%s", *floorPriceDiff.ListingID),
+						),
+					),
+				)
 				msg.ParseMode = "markdown"
 				if _, err := opts.Bot.Send(msg); err != nil {
 					log.Warnf("failed to send message to chat[%s]: %s", channelWatch.ChatID, err)
