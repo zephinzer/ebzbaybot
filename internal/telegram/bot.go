@@ -3,6 +3,7 @@ package telegram
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/zephinzer/ebzbaybot/internal/lifecycle"
@@ -40,26 +41,42 @@ func StartBot(opts StartBotOpts) error {
 	}()
 	for update := range updates {
 		if update.ChannelPost != nil {
+			channelID := update.ChannelPost.Chat.UserName
+			if channelID == "" { // for private channels
+				channelID = strconv.FormatInt(update.FromChat().ID, 10)
+			} else {
+				channelID = "@" + channelID
+			}
 			collectionIdentifier := update.ChannelPost.CommandArguments()
 			switch update.ChannelPost.Command() {
 			case "init":
-				fmt.Println("HI")
 				if collectionIdentifier == "" {
 					if _, err := bot.Send(tgbotapi.NewMessageToChannel(
-						"@"+update.ChannelPost.Chat.UserName,
+						channelID,
 						"Missing a collection identifier!",
 					)); err != nil {
 						log.Warnf("failed to send message to channel: %s", err)
 					}
 				}
-				handlers.HandleWatch(handlers.Opts{
+
+				if err := handlers.HandleWatch(handlers.Opts{
 					Update:     update,
 					Bot:        bot,
 					Connection: opts.Connection,
-				})
+				}); err != nil {
+					log.Warnf("failed to watch: %s", err)
+					msg := tgbotapi.NewMessageToChannel(
+						channelID,
+						fmt.Sprintf("Sorry, we failed to watch this channel because: `%s`", err),
+					)
+					msg.ParseMode = "markdown"
+					if _, err := bot.Send(msg); err != nil {
+						log.Warnf("failed to send message to channel: %s", err)
+					}
+				}
 			case "start":
 				if _, err := bot.Send(tgbotapi.NewMessageToChannel(
-					"@"+update.ChannelPost.Chat.UserName,
+					channelID,
 					"Initialise this channel by using /init followed by the collection identifier",
 				)); err != nil {
 					log.Warnf("failed to send message to channel: %s", err)

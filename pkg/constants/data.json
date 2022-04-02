@@ -1,19 +1,23 @@
 {
   "collections": {
     "0xe4ab77ed89528d90e6bcf0e1ac99c58da24e79d5": [
-      "CRO CROW"
+      "CRO CROW",
+      "crows"
     ],
     "0x57bB37249fAaC77c404a3CddE08687A20aA7a77D": [
-      "Cronos Bot Society"
+      "Cronos Bot Society",
+      "cbs"
     ],
     "0x562f021423d75a1636db5be1c4d99bc005ccebfe": [
-      "CronosChimp"
+      "CronosChimp",
+      "cc"
     ],
     "0x0e8f883124c1c234d64Ec566adC5966f1832d207": [
       "CronosFighters"
     ],
     "0xd8cdcA552c2419DaeEF7598C9a4C6Ff3526d35AC": [
-      "Cronos Football Club"
+      "Cronos Football Club",
+      "cronosfc"
     ],
     "0xc843f18d5605654391e7eDBEa250f6838C3e8936": [
       "Cronos Gorilla Business",
@@ -28,7 +32,8 @@
       "cpb"
     ],
     "0xaec3adc72e453ecb6009aa48e0ac967941b30c4e": [
-      "CroPunks - Punks on Cronos"
+      "CroPunks - Punks on Cronos",
+      "cropunks"
     ],
     "0xF87A517A5CaecaA03d7cCa770789BdB61e09e05F": [
       "CroSkull"
@@ -37,13 +42,16 @@
       "CROugars"
     ],
     "0x0f1439a290e86a38157831fe27a3dcd302904055": [
-      "CROW PUNKS"
+      "CROW PUNKS",
+      "crowpunks"
     ],
     "0xD504ed871d33dbD4f56f523A37dceC86Ee918cb6": [
-      "LazyHorse"
+      "LazyHorse",
+      "lhrc"
     ],
     "0xDdb5DE96A5A639AA6b0357c5A325444dA2BcE913": [
-      "Lolita & Friends"
+      "Lolita & Friends",
+      "lolita"
     ],
     "0xDC5bBDb4A4b051BDB85B959eB3cBD1c8C0d0c105": [
       "MM Treehouse",
@@ -57,10 +65,12 @@
       "NoBuddies NFT (OG)"
     ],
     "0x0c2Bcb06cB46F9aE7cDB29cF76245BC04048919D": [
-      "Panels Project"
+      "Panels Project",
+      "panels"
     ],
     "0xD56AFcdB787e233325757D3ED7A987F11FB3fa08": [
-      "Reckless Robots"
+      "Reckless Robots",
+      "rr"
     ],
     "0x51112Bf32B9a1C64716DF2e6b82e63a04Bd384Fd": [
       "Trooprz"

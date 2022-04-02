@@ -1,0 +1,3 @@
+package lifecycle
+
+const AdditionalPropertiesDelimiter = " • "

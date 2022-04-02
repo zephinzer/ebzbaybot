@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE floor_price_diffs ADD COLUMN rank VARCHAR(16) NULL;
+
+COMMIT;

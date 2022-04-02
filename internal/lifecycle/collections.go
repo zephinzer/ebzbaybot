@@ -99,6 +99,7 @@ func StartCollectionsScraping(opts ScrapingOpts) {
 			floorPriceDiffs[i].ImageURL = &floorCollectionStats.FloorImageURL
 			floorPriceDiffs[i].Edition = &floorCollectionStats.FloorEdition
 			floorPriceDiffs[i].Score = &floorCollectionStats.FloorScore
+			floorPriceDiffs[i].Rank = &floorCollectionStats.FloorRank
 		}
 
 		// save floor prices

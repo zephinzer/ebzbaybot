@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -118,6 +119,11 @@ func handleWatchCallback(opts Opts) error {
 
 func handleWatchChannel(opts Opts) error {
 	chatID := opts.Update.ChannelPost.Chat.UserName
+	if chatID == "" { // for private channels
+		chatID = strconv.FormatInt(opts.Update.FromChat().ID, 10)
+	} else {
+		chatID = "@" + chatID
+	}
 	collectionID := opts.Update.ChannelPost.CommandArguments()
 	collectionDetails, err := collection.GetCollectionByIdentifier(collectionID)
 	if err != nil {
@@ -136,13 +142,13 @@ func handleWatchChannel(opts Opts) error {
 	}); err != nil {
 		log.Warnf("failed to save channel watch on collection[%s] for channel[%s]: %s", collectionDetails.ID, chatID, err)
 		_, err = opts.Bot.Send(tgbotapi.NewMessageToChannel(
-			"@"+chatID,
+			chatID,
 			fmt.Sprintf("Something went wrong while trying to watch the *%s* collection. See logs for more information", collectionDetails.Label),
 		))
 		return err
 	}
 	msg := tgbotapi.NewMessageToChannel(
-		"@"+chatID,
+		chatID,
 		fmt.Sprintf("I will notify this channel for updates on the *%s* collection", collectionDetails.Label),
 	)
 	msg.ParseMode = "markdown"

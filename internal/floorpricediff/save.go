@@ -26,6 +26,7 @@ func Save(opts SaveOpts) error {
 		"image_url",
 		"edition",
 		"score",
+		"rank",
 		"last_updated",
 	}
 	onConflictUpdateColumns := []string{
@@ -35,6 +36,7 @@ func Save(opts SaveOpts) error {
 		"image_url",
 		"edition",
 		"score",
+		"rank",
 	}
 	for i := 0; i < len(onConflictUpdateColumns); i++ {
 		onConflictUpdateColumns[i] = fmt.Sprintf(
@@ -73,6 +75,7 @@ func Save(opts SaveOpts) error {
 			floorPriceDiff.ImageURL,
 			floorPriceDiff.Edition,
 			floorPriceDiff.Score,
+			floorPriceDiff.Rank,
 			"NOW()",
 		)
 	}

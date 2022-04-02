@@ -6,6 +6,7 @@ image_path := ebzbaybot
 -include ./Makefile.properties
 
 image_url ?= $(image_registry)/$(image_owner)/$(image_path)
+release_version ?= v0.0.1
 release_tag ?= latest
 
 # this adjusts the binary extension for when building with windows
@@ -30,7 +31,7 @@ lint:
 build:
 	CGO_ENABLED=0 go build \
 		-ldflags " \
-			-X github.com/zephinzer/ebzbaybot/internal/constants.Version=\"$(release_tag)\" \
+			-X github.com/zephinzer/ebzbaybot/internal/constants.Version=\$(release_version)-$(release_tag)\" \
 			-extldflags 'static' -s -w \
 		" \
 		-o ./bin/$(app)_$$(go env GOOS)_$$(go env GOARCH)$(bin_ext) \
@@ -45,6 +46,13 @@ image:
 		.
 release: image
 	docker tag $(image_url):latest $(image_url):$(release_tag)
+	docker push $(image_url):latest
 	docker push $(image_url):$(release_tag)
+ifdef release_version
+	docker tag $(image_url):latest $(image_url):$(release_version)
+	docker push $(image_url):$(release_version)
+endif
+release-git:
+	@$(MAKE) release release_tag=$$(git rev-parse HEAD | head -c 8) release_version=$$(git describe --tags)
 install:
 	go install .

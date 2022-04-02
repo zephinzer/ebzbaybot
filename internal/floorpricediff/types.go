@@ -12,5 +12,6 @@ type FloorPriceDiff struct {
 	ImageURL      *string   `json:"imageURL"`
 	Edition       *string   `json:"edition"`
 	Score         *string   `json:"score"`
+	Rank          *string   `json:"rank"`
 	LastUpdated   time.Time `json:"lastUpdated"`
 }

@@ -29,6 +29,8 @@ func handleCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI, connection *sql
 		err = handlers.HandleUnwatch(opts)
 	case "help":
 		err = handlers.HandleHelp(opts)
+	case "stats":
+		err = handlers.HandleStats(opts)
 	default:
 		err = handlers.HandleIDK(opts)
 	}

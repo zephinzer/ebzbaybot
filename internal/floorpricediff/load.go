@@ -22,6 +22,7 @@ func Load(opts LoadOpts) (FloorPriceDiffs, error) {
 		"image_url",
 		"edition",
 		"score",
+		"rank",
 		"last_updated",
 	}
 	query := fmt.Sprintf("SELECT %s FROM floor_price_diffs", strings.Join(selectedColumns, ", "))
@@ -42,6 +43,7 @@ func Load(opts LoadOpts) (FloorPriceDiffs, error) {
 			&fpd.ImageURL,
 			&fpd.Edition,
 			&fpd.Score,
+			&fpd.Rank,
 			&fpd.LastUpdated,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan row[%v]: %s", len(floorPriceDiffs), err)

@@ -48,6 +48,16 @@ func StartUpdatingChannelWatchers(opts WatchingOpts) error {
 			userLastUpdatedAt := channelWatch.LastUpdated
 			floorPriceLastUpdatedAt := floorPriceDiff.LastUpdated
 			if floorPriceLastUpdatedAt.After(userLastUpdatedAt) {
+				chatID := channelWatch.ChatID
+				// this is because of a previous bug, if a wrong chat id was saved,
+				// just skip it
+				if len(chatID) == 0 {
+					continue
+				}
+				if chatID[0] != '-' {
+					chatID = "@" + chatID
+				}
+
 				collectionInstance, _ := collection.GetCollectionByIdentifier(collectionID)
 
 				// trigger user update
@@ -69,10 +79,27 @@ func StartUpdatingChannelWatchers(opts WatchingOpts) error {
 					directionSymbol = constants.UserTextPriceUp
 					directionText = "up"
 				}
-				log.Infof("triggering floor price change message to channel[%s]...", channelWatch.ChatID)
-				msg := tgbotapi.NewMessageToChannel("@"+channelWatch.ChatID, fmt.Sprintf(
-					"[🚨](%s)%s [%s](https://app.ebisusbay.com/collection/%s) FP: *%s* CRO (%s from _%s_ CRO)\n\n"+
-						"Edition/Score : *#%s* / _%s_",
+
+				log.Infof("triggering floor price change message to channel[%s]...", chatID)
+
+				additionalKeys := []string{"*Edition*"}
+				additionalValues := []string{"*" + *floorPriceDiff.Edition + "*"}
+				if floorPriceDiff.Rank != nil && *floorPriceDiff.Rank != "0" {
+					additionalKeys = append(additionalKeys, "`Rank`")
+					additionalValues = append(additionalValues, "`"+*floorPriceDiff.Rank+"`")
+				}
+				if floorPriceDiff.Score != nil && *floorPriceDiff.Score != "0.00" {
+					additionalKeys = append(additionalKeys, "_Score_")
+					additionalValues = append(additionalValues, "_"+*floorPriceDiff.Score+"_")
+				}
+				additionalProperties := fmt.Sprintf(
+					"%s\n%s",
+					strings.Join(additionalKeys, AdditionalPropertiesDelimiter),
+					strings.Join(additionalValues, AdditionalPropertiesDelimiter),
+				)
+
+				msg := tgbotapi.NewMessageToChannel(chatID, fmt.Sprintf(
+					"[🚨](%s)%s [%s](https://app.ebisusbay.com/collection/%s) FP: *%s* CRO (%s from _%s_ CRO)\n\n%s",
 					*floorPriceDiff.ImageURL,
 					directionSymbol,
 					collectionInstance.Label,
@@ -80,8 +107,7 @@ func StartUpdatingChannelWatchers(opts WatchingOpts) error {
 					currentFloorPrice,
 					directionText,
 					previousFloorPrice,
-					*floorPriceDiff.Edition,
-					*floorPriceDiff.Score,
+					additionalProperties,
 				))
 				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 					tgbotapi.NewInlineKeyboardRow(

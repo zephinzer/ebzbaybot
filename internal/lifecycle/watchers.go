@@ -79,9 +79,25 @@ func StartUpdatingWatchers(opts WatchingOpts) error {
 				}
 
 				log.Infof("triggering floor price change message to chat[%v]...", databaseWatch.ChatID)
+
+				additionalKeys := []string{"*Edition*"}
+				additionalValues := []string{"*" + *floorPriceDiff.Edition + "*"}
+				if floorPriceDiff.Rank != nil && *floorPriceDiff.Rank != "0" {
+					additionalKeys = append(additionalKeys, "`Rank`")
+					additionalValues = append(additionalValues, "`"+*floorPriceDiff.Rank+"`")
+				}
+				if floorPriceDiff.Score != nil && *floorPriceDiff.Score != "0.00" {
+					additionalKeys = append(additionalKeys, "_Score_")
+					additionalValues = append(additionalValues, "_"+*floorPriceDiff.Score+"_")
+				}
+				additionalProperties := fmt.Sprintf(
+					"%s\n%s",
+					strings.Join(additionalKeys, AdditionalPropertiesDelimiter),
+					strings.Join(additionalValues, AdditionalPropertiesDelimiter),
+				)
+
 				msg := tgbotapi.NewMessage(databaseWatch.ChatID, fmt.Sprintf(
-					"[🚨](%s)%s [%s](https://app.ebisusbay.com/collection/%s) FP: *%s* CRO (%s from _%s_ CRO)\n\n"+
-						"Edition/Score : *#%s* / _%s_",
+					"[🚨](%s)%s [%s](https://app.ebisusbay.com/collection/%s) FP: *%s* CRO (%s from _%s_ CRO)\n\n%s",
 					*floorPriceDiff.ImageURL,
 					directionSymbol,
 					collectionInstance.Label,
@@ -89,8 +105,7 @@ func StartUpdatingWatchers(opts WatchingOpts) error {
 					currentFloorPrice,
 					directionText,
 					previousFloorPrice,
-					*floorPriceDiff.Edition,
-					*floorPriceDiff.Score,
+					additionalProperties,
 				))
 				msg.ParseMode = "markdown"
 				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
