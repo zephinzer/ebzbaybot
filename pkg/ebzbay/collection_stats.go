@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/zephinzer/ebzbaybot/pkg/constants"
 	"gitlab.com/zephinzer/go-devops"
@@ -62,7 +63,13 @@ func GetCollectionStats(collection string) *CollectionStats {
 	if listingResponse.Listings != nil && len(listingResponse.Listings) > 0 {
 		floorListing := listingResponse.Listings[0]
 		floorListingID = strconv.FormatInt(floorListing.ListingID, 10)
-		floorImageURL = floorListing.NFT.OriginalImage
+		// this fixes an issue where some of the `originalImage` property
+		// is on the ipfs protocol and inaccessible to telegram
+		if strings.Index(floorListing.NFT.OriginalImage, "ipfs://") == 0 {
+			floorImageURL = floorListing.NFT.Image
+		} else {
+			floorImageURL = floorListing.NFT.OriginalImage
+		}
 		floorEdition = strconv.FormatInt(floorListing.NFT.Edition, 10)
 		floorScore = strconv.FormatFloat(floorListing.NFT.Score, 'f', 2, 64)
 	}

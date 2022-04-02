@@ -22,6 +22,7 @@ type NFT struct {
 	NftAddress           string            `json:"nftAddress"`
 	NftID                string            `json:"nftId"`
 	OriginalImage        string            `json:"original_image"`
+	Image                string            `json:"image"`
 	Score                float64           `json:"score"`
 	SimplifiedAttributes map[string]string `json:"simplifiedAttributes"`
 }
