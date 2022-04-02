@@ -31,7 +31,7 @@ lint:
 build:
 	CGO_ENABLED=0 go build \
 		-ldflags " \
-			-X github.com/zephinzer/ebzbaybot/internal/constants.Version=\$(release_version)-$(release_tag)\" \
+			-X github.com/zephinzer/ebzbaybot/internal/constants.Version=$(release_version)-$(release_tag) \
 			-extldflags 'static' -s -w \
 		" \
 		-o ./bin/$(app)_$$(go env GOOS)_$$(go env GOARCH)$(bin_ext) \
