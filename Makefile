@@ -41,7 +41,8 @@ image:
 	docker build \
 		--network host \
 		--file ./Dockerfile \
-		--build-arg release_tag=$(release_tag) \
+		--build-arg RELEASE_TAG=$(release_tag) \
+		--build-arg RELEASE_VERSION=$(release_version) \
 		--tag $(image_url):latest \
 		.
 release: image

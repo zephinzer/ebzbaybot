@@ -13,7 +13,9 @@ COPY ./*.go ./
 # this should be set by the build recipe in the Makefile
 ARG RELEASE_TAG=latest
 ENV RELEASE_TAG=${RELEASE_TAG}
-RUN make release_tag=${RELEASE_TAG} build
+ARG RELEASE_VERSION=latest
+ENV RELEASE_VERSION=${RELEASE_VERSION}
+RUN make build release_tag=${RELEASE_TAG} release_version=${RELEASE_VERSION}
 RUN mv ./bin/ebzbaybot_$(go env GOOS)_$(go env GOARCH) ./bin/ebzbaybot
 RUN mv ./bin/ebzbaybot_$(go env GOOS)_$(go env GOARCH).sha256 ./bin/ebzbaybot.sha256
 
