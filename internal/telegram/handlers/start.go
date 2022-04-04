@@ -12,7 +12,7 @@ func HandleStart(opts Opts) error {
 		"👋🏼 *HELLO/你好/HOLA/GUTEN TAG/BONJOUR*\n\n"+
 			"🌟 I'm @EbzBayBot and I help you with NFT adventures at the [Ebisus Bay NFT Marketplace](https://app.ebisusbay.com) by notifying you about changes to collections you're eyeing.\n\n"+
 			"⚙️ Check out my [code on GitHub](https://github.com/zephinzer/ebzbaybot)\n\n"+
-			"💡 Donations address for server costs + eternal gratitude: `%s`\n\n"+
+			"💡 Donations address for server costs + eternal gratitude ($CRO/$ETH): `%s`\n\n"+
 			"ℹ️ Use /help or start typing a `/` to see available commands",
 		constants.DonationAddress,
 	))
