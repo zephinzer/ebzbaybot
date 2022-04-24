@@ -121,8 +121,6 @@ func handleWatchChannel(opts Opts) error {
 	chatID := opts.Update.ChannelPost.Chat.UserName
 	if chatID == "" { // for private channels
 		chatID = strconv.FormatInt(opts.Update.FromChat().ID, 10)
-	} else {
-		chatID = "@" + chatID
 	}
 	collectionID := opts.Update.ChannelPost.CommandArguments()
 	collectionDetails, err := collection.GetCollectionByIdentifier(collectionID)
