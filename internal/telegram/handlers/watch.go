@@ -129,6 +129,11 @@ func handleWatchChannel(opts Opts) error {
 		return fmt.Errorf("failed to get collection")
 	}
 
+	sendToChatID := chatID
+	isPrivateChannel := chatID[0] == '-'
+	if !isPrivateChannel {
+		sendToChatID = "@" + chatID
+	}
 	if err := watch.SaveChannel(watch.SaveChannelOpts{
 		Connection: opts.Connection,
 		Watches: watch.ChannelWatches{
@@ -140,13 +145,13 @@ func handleWatchChannel(opts Opts) error {
 	}); err != nil {
 		log.Warnf("failed to save channel watch on collection[%s] for channel[%s]: %s", collectionDetails.ID, chatID, err)
 		_, err = opts.Bot.Send(tgbotapi.NewMessageToChannel(
-			chatID,
+			sendToChatID,
 			fmt.Sprintf("Something went wrong while trying to watch the *%s* collection. See logs for more information", collectionDetails.Label),
 		))
 		return err
 	}
 	msg := tgbotapi.NewMessageToChannel(
-		chatID,
+		sendToChatID,
 		fmt.Sprintf("I will notify this channel for updates on the *%s* collection", collectionDetails.Label),
 	)
 	msg.ParseMode = "markdown"
